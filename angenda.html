@@ -1,0 +1,66 @@
+<style>
+  div#tarefas_pendentes {
+    width: 100%;
+  }
+</style>
+<meta name="viewport" content="initial-scale=1">
+<link rel="stylesheet" href="https://unpkg.com/material-components-web@8.0.0/dist/material-components-web.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+<script src="https://unpkg.com/material-components-web@8.0.0/dist/material-components-web.min.js"></script>
+<div id="tarefas_pendentes" class="mdc-data-table">
+  <div class="mdc-data-table__table-container">
+    <table class="mdc-data-table__table" aria-label="Tarefas pendentes">
+      <thead>
+        <tr class="mdc-data-table__header-row">
+          <th class="mdc-data-table__header-cell" role="columnheader" scope="col"></th>
+          <th class="mdc-data-table__header-cell" role="columnheader" scope="col">Descrição</th>
+        </tr>
+      </thead>
+      <tbody id="tarefas_pendentes" class="mdc-data-table__content">
+        <tr class="mdc-data-table__row">
+          <td class="mdc-data-table__cell"></td>
+          <td id="nova_tarefa" class="mdc-data-table__cell" contenteditable></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+<script>
+  window.addEventListener("load", () => {
+    document.querySelector("td#nova_tarefa").addEventListener("keyup", (evento) => {
+      if (evento.keyCode == 13) {
+        var tbody_tarefas_pendentes = document.querySelector("tbody#tarefas_pendentes")
+        var tr = document.createElement("tr")
+        tr.classList.add("mdc-data-table__row")
+        var td = document.createElement("td")
+        td.classList.add("mdc-data-table__cell")
+        var div = document.createElement("div")
+        div.classList.add("mdc-touch-target-wrapper")
+        var div2 = document.createElement("div")
+        div2.classList.add("mdc-checkbox")
+        div2.classList.add("mdc-checkbox__touch")
+        var input = document.createElement("input")
+        input.type = "checkbox"
+        input.classList.add("mdc-checkbox__native-control")
+        div2.appendChild(input)
+        var div3 = document.createElement("div")
+        div3.classList.add("mdc-checkbox__background")
+        div2.appendChild(div3)
+        var div3 = document.createElement("div")
+        div3.classList.add("mdc-checkbox__ripple")
+        div2.appendChild(div3)
+        div.appendChild(div2)
+        td.appendChild(div)
+        tr.appendChild(td)
+        var td = document.createElement("td")
+        td.classList.add("mdc-data-table__cell")
+        td.textContent = evento.target.textContent
+        tr.appendChild(td)
+        tbody_tarefas_pendentes.appendChild(tr)
+        tbody_tarefas_pendentes.appendChild(evento.target.parentElement)
+        evento.target.textContent = ""
+        evento.preventDefault()
+      }
+    })
+  })
+</script>
