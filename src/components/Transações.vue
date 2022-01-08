@@ -34,7 +34,7 @@
       </div>
     </md-toolbar>
     <md-list v-for="(dia, i) in dias" :key="i">
-      <md-subheader>{{ dia.id }}</md-subheader>
+      <md-subheader style="background-color: lightgray">{{ dia.id }}</md-subheader>
       <md-list-item v-for="(transação, j) in dia.transações.filter(t => t.mês === mês)" :key="j">
         <md-checkbox style="display: none"></md-checkbox>
         <md-checkbox v-if="transação.data <= agora" class="confirmar_transação" v-model="transação.realizada" @change="atualizar_transação(transação)"></md-checkbox>
@@ -62,7 +62,7 @@
       </md-list-item>
     </md-list>
     <md-list>
-      <md-subheader>Saldo</md-subheader>
+      <md-subheader style="background-color: lightgray">Saldo</md-subheader>
       <md-list-item>
         <span>Atual</span>
         <span :class="saldo_atual < 0 ? 'valor_negativo' : ''">{{ brl(saldo_atual) }}</span>
@@ -77,7 +77,7 @@
       </md-list-item>
     </md-list>
     <md-list>
-      <md-subheader>Alterações no mês</md-subheader>
+      <md-subheader style="background-color: lightgray">Alterações no mês</md-subheader>
       <md-list-item>
         <span>Receitas</span>
         <span :class="receitas < 0 ? 'valor_negativo' : ''">{{ brl(receitas) }}</span>
