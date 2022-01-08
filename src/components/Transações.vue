@@ -56,6 +56,10 @@
           </md-menu-content>
         </md-menu>
       </md-list-item>
+      <md-list-item>
+        <span class="md-list-item-text"></span>
+        <span>{{ brl(saldo_dia(dia)) }}</span>
+      </md-list-item>
     </md-list>
     <md-list>
       <md-subheader>Saldo</md-subheader>
@@ -229,6 +233,7 @@
         db.atualizar("transações", transação)
       },
       brl: valor => brl.format(valor),
+      saldo_dia: function (dia) { return this.transações.filter(t => t.data <= dia.transações[0].data).map(t => t.valor).reduce((a, b) => a + b, 0) },
     },
   }
 </script>
