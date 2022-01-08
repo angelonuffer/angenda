@@ -58,7 +58,7 @@
       </md-list-item>
       <md-list-item>
         <span class="md-list-item-text"></span>
-        <span>{{ brl(saldo_dia(dia)) }}</span>
+        <span :class="saldo_dia(dia) < 0 ? 'valor_negativo' : ''">{{ brl(saldo_dia(dia)) }}</span>
       </md-list-item>
     </md-list>
     <md-list>
