@@ -37,7 +37,7 @@
       <md-subheader>{{ dia.id }}</md-subheader>
       <md-list-item v-for="(transação, j) in dia.transações.filter(t => t.mês === mês)" :key="j">
         <md-checkbox style="display: none"></md-checkbox>
-        <md-checkbox class="confirmar_transação" v-model="transação.realizada" @change="atualizar_transação(transação)"></md-checkbox>
+        <md-checkbox v-if="transação.data <= agora" class="confirmar_transação" v-model="transação.realizada" @change="atualizar_transação(transação)"></md-checkbox>
         <span class="md-list-item-text">{{ transação.descrição }}</span>
         <span :class="transação.valor < 0 ? 'valor_negativo' : ''">{{ brl(transação.valor) }}</span>
         <md-menu>
@@ -114,6 +114,7 @@
   const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
   export default {
     data: () => ({
+      agora,
       mês,
       abrir_diálogo_adicionar_transação: false,
       editando_transação: false,
