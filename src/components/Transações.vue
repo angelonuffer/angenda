@@ -1,5 +1,5 @@
 <template>
-  <md-content style="max-width: 500px">
+  <md-content>
     <md-dialog :md-active.sync="abrir_diálogo_adicionar_transação">
       <md-dialog-title>{{ editando_transação ? "Editar" : "Adicionar" }} transação</md-dialog-title>
       <md-datepicker v-model="data"></md-datepicker>
