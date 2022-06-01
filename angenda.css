@@ -1,0 +1,53 @@
+* {
+  font-size: 24px;
+  font-family: sans-serif;
+}
+
+.linha {
+  display: flex;
+  flex-direction: row;
+}
+
+.linha > * {
+  flex-grow: 1;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  margin: 0;
+  height: 100%;
+  max-width: 680px;
+}
+
+select, button {
+  min-height: 42px;
+  border-width: 0;
+  outline: none;
+  background-color: #FFF;
+  cursor: pointer;
+}
+
+div#página {
+  flex-grow: 1;
+  overflow-x: hidden;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  border-width: 1px;
+  border-color: #000;
+  border-top-style: solid;
+}
+
+div.item {
+  border-width: 1px;
+  border-color: #000;
+  border-bottom-style: solid;
+  min-height: 42px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
