@@ -13,16 +13,22 @@ window.onload = () => {
     div_item.classList.add("item")
     const div_título = document.createElement("div")
     div_item.appendChild(div_título)
-    let nome = "Angenda"
+    let nome = "Página"
     let contador = 1
     while ([...div_itens.children].some(div_item => {
       return div_item.children[0].textContent === nome
     })) {
-      nome = "Angenda " + ++contador
+      nome = "Página " + ++contador
     }
     div_título.textContent = nome
     div_item.oncontextmenu = e => {
       e.preventDefault()
+      const input_título = document.createElement("input")
+      div_item.appendChild(input_título)
+      input_título.type = "text"
+      input_título.value = div_título.textContent
+      input_título.focus()
+      div_título.style.display = "none"
       const div = document.createElement("div")
       div_item.appendChild(div)
       div.classList.add("linha")
@@ -32,7 +38,18 @@ window.onload = () => {
       button_eliminar.appendChild(i_eliminar)
       i_eliminar.classList.add("bi-trash")
       button_eliminar.onclick = () => {
-        if (confirm("Eliminar \"" + nome + "\"?")) div_itens.removeChild(div_item)
+        if (confirm("Eliminar \"" + div_título.textContent + "\"?")) div_itens.removeChild(div_item)
+      }
+      const button_confirmar = document.createElement("button")
+      div.appendChild(button_confirmar)
+      const i_confirmar = document.createElement("i")
+      button_confirmar.appendChild(i_confirmar)
+      i_confirmar.classList.add("bi-check2-circle")
+      button_confirmar.onclick = () => {
+        div_título.textContent = input_título.value
+        div_título.style.display = "block"
+        div_item.removeChild(input_título)
+        div_item.removeChild(div)
       }
       const button_cancelar = document.createElement("button")
       div.appendChild(button_cancelar)
@@ -40,6 +57,8 @@ window.onload = () => {
       button_cancelar.appendChild(i_cancelar)
       i_cancelar.classList.add("bi-x-circle")
       button_cancelar.onclick = () => {
+        div_título.style.display = "block"
+        div_item.removeChild(input_título)
         div_item.removeChild(div)
       }
     }

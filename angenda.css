@@ -21,7 +21,7 @@ body {
   max-width: 680px;
 }
 
-select, button {
+select, button, input {
   min-height: 42px;
   border-width: 0;
   outline: none;
