@@ -23,13 +23,16 @@
                 <q-icon :name="objeto.ícone" />
               </q-item-section>
               <q-item-section v-if="objeto.classe === I_EMBUTIDOS.Lista">
-                {{ objeto.nome }}
+                <q-item-label>{{ objeto.nome }}</q-item-label>
               </q-item-section>
               <q-item-section v-if="objeto.classe === I_EMBUTIDOS.Texto">
                 <q-input @click.stop v-model="objeto.valor" />
               </q-item-section>
               <q-item-section v-if="objeto.classe === I_EMBUTIDOS.Número">
                 <q-input type="number" @click.stop v-model.number="objeto.valor" />
+              </q-item-section>
+              <q-item-section v-if="objeto.classe === I_EMBUTIDOS.Lógico">
+                <q-toggle v-model="objeto.valor" label="Lógico" />
               </q-item-section>
               <q-item-section side>
                 <q-btn flat round icon="more_vert" @click.stop>
@@ -107,6 +110,11 @@
       ícone: "123",
       nome: "Número",
       valor_padrão: 0,
+    },
+    {
+      ícone: "toggle_on",
+      nome: "Lógico",
+      valor_padrão: false,
     },
   ]
   let I_EMBUTIDOS = Object.fromEntries(EMBUTIDOS.map((t, i) => [t.nome, i]))
