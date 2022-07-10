@@ -18,11 +18,14 @@
         </span>
         <span class="q-gutter-y-md">
           <q-list bordered separator class="rounded-borders">
-            <q-item clickable v-ripple v-for="(objeto, i) in objetos" :key="objeto.nome" @click="endereço.push(objeto)">
+            <q-item clickable v-ripple v-for="(objeto, i) in objetos" :key="objeto.nome" @click="() => { if (objeto.classe === I_EMBUTIDOS.Lista) endereço.push(objeto) }">
               <q-item-section avatar>
                 <q-icon :name="objeto.ícone" />
               </q-item-section>
-              <q-item-section>{{ objeto.nome }}</q-item-section>
+              <q-item-section v-if="objeto.classe === I_EMBUTIDOS.Lista">{{ objeto.nome }}</q-item-section>
+              <q-item-section v-if="objeto.classe === I_EMBUTIDOS.Texto">
+                <q-input @click.stop v-model="objeto.valor" />
+              </q-item-section>
               <q-item-section side>
                 <q-btn flat round icon="more_vert" @click.stop>
                   <q-menu>
@@ -53,8 +56,22 @@
       <q-bar>
         <span>Adicionar objeto</span>
       </q-bar>
-      <q-card-section>
+      <q-card-section class="q-gutter-md">
         <q-input v-model="nome_do_novo_objeto" label="Nome" autofocus />
+        <q-list bordered separator>
+          <q-item clickable v-ripple :active="classe === I_EMBUTIDOS.Lista" @click="classe = I_EMBUTIDOS.Lista">
+            <q-item-section avatar>
+              <q-icon name="list" />
+            </q-item-section>
+            <q-item-section>Lista</q-item-section>
+          </q-item>
+          <q-item clickable v-ripple :active="classe === I_EMBUTIDOS.Texto" @click="classe = I_EMBUTIDOS.Texto">
+            <q-item-section avatar>
+              <q-icon name="abc" />
+            </q-item-section>
+            <q-item-section>Texto</q-item-section>
+          </q-item>
+        </q-list>
       </q-card-section>
       <q-separator />
       <q-card-actions align="right">
@@ -66,14 +83,46 @@
 </template>
 
 <script>
-  import { defineComponent, ref } from 'vue'
+  import { defineComponent, ref, toRaw } from 'vue'
   import { setCssVar } from 'quasar'
   setCssVar('primary', '#cd0000')
+  let EMBUTIDOS = [
+    {
+      ícone: "emoji_objects",
+      nome: "Objeto",
+      valor_padrão: {},
+    },
+    {
+      ícone: "list",
+      nome: "Lista",
+      valor_padrão: [],
+    },
+    {
+      ícone: "abc",
+      nome: "Texto",
+      valor_padrão: "",
+    },
+  ]
+  let I_EMBUTIDOS = Object.fromEntries(EMBUTIDOS.map((t, i) => [t.nome, i]))
+  EMBUTIDOS.push(
+    {
+      classe: I_EMBUTIDOS.Lista,
+      nome: "raiz",
+      valor: [],
+    },
+    {
+      classe: I_EMBUTIDOS.Lista,
+      nome: "lixeira",
+      valor: [],
+    },
+  )
+  I_EMBUTIDOS = Object.fromEntries(EMBUTIDOS.map((t, i) => [t.nome, i]))
   export default defineComponent({
     data() {
       return {
         diálogo_adicionar_objeto: false,
         nome_do_novo_objeto: "",
+        classe: I_EMBUTIDOS.Lista,
         endereço: [],
         objetos: [],
       }
@@ -85,30 +134,8 @@
       },
     },
     created() {
-      this.EMBUTIDOS = [
-        {
-          ícone: "emoji_objects",
-          nome: "Objeto",
-        },
-        {
-          ícone: "list",
-          nome: "Lista",
-        },
-      ]
-      this.I_EMBUTIDOS = Object.fromEntries(this.EMBUTIDOS.map((t, i) => [t.nome, i]))
-      this.EMBUTIDOS.push(
-        {
-          classe: this.I_EMBUTIDOS.Lista,
-          nome: "raiz",
-          valor: [],
-        },
-        {
-          classe: this.I_EMBUTIDOS.Lista,
-          nome: "lixeira",
-          valor: [],
-        },
-      )
-      this.I_EMBUTIDOS = Object.fromEntries(this.EMBUTIDOS.map((t, i) => [t.nome, i]))
+      this.EMBUTIDOS = EMBUTIDOS
+      this.I_EMBUTIDOS = I_EMBUTIDOS
       const r = indexedDB.open(location.pathname, 1)
       r.onupgradeneeded = e => {
         const db = e.target.result
@@ -124,18 +151,20 @@
       adicionar() {
         const objetos = this.db.transaction(['objetos'], 'readwrite').objectStore('objetos')
         objetos.add({
-          classe: this.I_EMBUTIDOS.Lista,
+          classe: this.classe,
           nome: this.nome_do_novo_objeto,
-          valor: [],
+          valor: this.EMBUTIDOS[this.classe].valor_padrão,
         }).onsuccess = e => {
           const i_objeto = e.target.result
           objetos.get(this.i_objeto_atual).onsuccess = e => {
             e.target.result.valor.push(i_objeto)
             objetos.put(e.target.result, this.i_objeto_atual).onsuccess = e => {
               this.objetos.push({
-                ícone: this.EMBUTIDOS[this.I_EMBUTIDOS.Lista].ícone,
+                classe: this.classe,
+                ícone: this.EMBUTIDOS[this.classe].ícone,
                 nome: this.nome_do_novo_objeto,
                 id: i_objeto,
+                valor: this.EMBUTIDOS[this.classe].valor_padrão,
               })
             }
           }
@@ -161,8 +190,8 @@
     },
     watch: {
       endereço: {
-        handler(novo) {
-        this.objetos = []
+        handler() {
+          this.objetos = []
           const objetos = this.db.transaction(['objetos'], 'readonly').objectStore('objetos')
           objetos.get(this.i_objeto_atual).onsuccess = e => {
             e.target.result.valor.forEach(i_objeto => {
@@ -170,14 +199,28 @@
                 const objeto = e.target.result
                 objetos.get(objeto.classe).onsuccess = e => {
                   this.objetos.push({
+                    classe: objeto.classe,
                     ícone: e.target.result.ícone,
                     nome: objeto.nome,
                     id: i_objeto,
+                    valor: objeto.valor,
                   })
                 }
               }
             })
           }
+        },
+        deep: true,
+      },
+      objetos: {
+        handler() {
+          const objetos = this.db.transaction(['objetos'], 'readwrite').objectStore('objetos')
+          this.objetos.forEach(objeto => {
+            objetos.get(objeto.id).onsuccess = e => {
+              e.target.result.valor = toRaw(objeto.valor)
+              objetos.put(e.target.result, objeto.id)
+            }
+          })
         },
         deep: true,
       },
