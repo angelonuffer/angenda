@@ -22,9 +22,14 @@
               <q-item-section avatar>
                 <q-icon :name="objeto.ícone" />
               </q-item-section>
-              <q-item-section v-if="objeto.classe === I_EMBUTIDOS.Lista">{{ objeto.nome }}</q-item-section>
+              <q-item-section v-if="objeto.classe === I_EMBUTIDOS.Lista">
+                {{ objeto.nome }}
+              </q-item-section>
               <q-item-section v-if="objeto.classe === I_EMBUTIDOS.Texto">
                 <q-input @click.stop v-model="objeto.valor" />
+              </q-item-section>
+              <q-item-section v-if="objeto.classe === I_EMBUTIDOS.Número">
+                <q-input type="number" @click.stop v-model.number="objeto.valor" />
               </q-item-section>
               <q-item-section side>
                 <q-btn flat round icon="more_vert" @click.stop>
@@ -59,18 +64,14 @@
       <q-card-section class="q-gutter-md">
         <q-input v-model="nome_do_novo_objeto" label="Nome" autofocus />
         <q-list bordered separator>
-          <q-item clickable v-ripple :active="classe === I_EMBUTIDOS.Lista" @click="classe = I_EMBUTIDOS.Lista">
-            <q-item-section avatar>
-              <q-icon name="list" />
-            </q-item-section>
-            <q-item-section>Lista</q-item-section>
-          </q-item>
-          <q-item clickable v-ripple :active="classe === I_EMBUTIDOS.Texto" @click="classe = I_EMBUTIDOS.Texto">
-            <q-item-section avatar>
-              <q-icon name="abc" />
-            </q-item-section>
-            <q-item-section>Texto</q-item-section>
-          </q-item>
+          <template v-for="(objeto, i) in EMBUTIDOS">
+            <q-item clickable v-ripple v-if="objeto.classe === undefined" :active="classe === i" @click="classe = i">
+              <q-item-section avatar>
+                <q-icon :name="objeto.ícone" />
+              </q-item-section>
+              <q-item-section>{{ objeto.nome }}</q-item-section>
+            </q-item>
+          </template>
         </q-list>
       </q-card-section>
       <q-separator />
@@ -102,6 +103,11 @@
       nome: "Texto",
       valor_padrão: "",
     },
+    {
+      ícone: "123",
+      nome: "Número",
+      valor_padrão: 0,
+    },
   ]
   let I_EMBUTIDOS = Object.fromEntries(EMBUTIDOS.map((t, i) => [t.nome, i]))
   EMBUTIDOS.push(
@@ -122,7 +128,7 @@
       return {
         diálogo_adicionar_objeto: false,
         nome_do_novo_objeto: "",
-        classe: I_EMBUTIDOS.Lista,
+        classe: I_EMBUTIDOS.Objeto,
         endereço: [],
         objetos: [],
       }
