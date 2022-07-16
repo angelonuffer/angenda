@@ -59,13 +59,12 @@
       </q-page>
     </q-page-container>
   </q-layout>
-  <q-dialog v-model="diálogo_adicionar_objeto" @hide="nome_do_novo_objeto = ''">
+  <q-dialog v-model="diálogo_adicionar_objeto">
     <q-card>
       <q-bar>
         <span>Adicionar objeto</span>
       </q-bar>
       <q-card-section class="q-gutter-md">
-        <q-input v-model="nome_do_novo_objeto" label="Nome" autofocus />
         <q-list bordered separator>
           <template v-for="(objeto, i) in EMBUTIDOS">
             <q-item clickable v-ripple v-if="objeto.classe === undefined" :active="classe === i" @click="classe = i">
@@ -135,7 +134,6 @@
     data() {
       return {
         diálogo_adicionar_objeto: false,
-        nome_do_novo_objeto: "",
         classe: I_EMBUTIDOS.Objeto,
         endereço: [],
         objetos: [],
@@ -166,7 +164,6 @@
         const objetos = this.db.transaction(['objetos'], 'readwrite').objectStore('objetos')
         objetos.add({
           classe: this.classe,
-          nome: this.nome_do_novo_objeto,
           valor: this.EMBUTIDOS[this.classe].valor_padrão,
         }).onsuccess = e => {
           const i_objeto = e.target.result
@@ -176,7 +173,7 @@
               this.objetos.push({
                 classe: this.classe,
                 ícone: this.EMBUTIDOS[this.classe].ícone,
-                nome: this.nome_do_novo_objeto,
+                nome: this.EMBUTIDOS[this.classe].nome,
                 id: i_objeto,
                 valor: this.EMBUTIDOS[this.classe].valor_padrão,
               })
@@ -215,7 +212,7 @@
                   this.objetos.push({
                     classe: objeto.classe,
                     ícone: e.target.result.ícone,
-                    nome: objeto.nome,
+                    nome: this.EMBUTIDOS[objeto.classe].nome,
                     id: i_objeto,
                     valor: objeto.valor,
                   })
