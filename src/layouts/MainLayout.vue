@@ -18,21 +18,24 @@
         </span>
         <span class="q-gutter-y-md">
           <q-list bordered separator class="rounded-borders">
-            <q-item clickable v-ripple v-for="(objeto, i) in objetos" :key="objeto.nome" @click="() => { if (objeto.classe === I_EMBUTIDOS.Lista) endereço.push(objeto) }">
+            <q-item clickable v-ripple v-for="(objeto, i) in objetos" :key="objeto.nome" @click="() => { if (objeto.classe === I_EMBUTIDOS.Lista || objeto.classe === I_EMBUTIDOS.Objeto) endereço.push(objeto) }">
               <q-item-section avatar>
                 <q-icon :name="objeto.ícone" />
+              </q-item-section>
+              <q-item-section v-if="objeto.classe === I_EMBUTIDOS.Objeto">
+                <q-item-label>{{ objeto.nome }}</q-item-label>
               </q-item-section>
               <q-item-section v-if="objeto.classe === I_EMBUTIDOS.Lista">
                 <q-item-label>{{ objeto.nome }}</q-item-label>
               </q-item-section>
               <q-item-section v-if="objeto.classe === I_EMBUTIDOS.Texto">
-                <q-input @click.stop v-model="objeto.valor" />
+                <q-input @click.stop v-model="objeto.valor" :label="objeto.nome" />
               </q-item-section>
               <q-item-section v-if="objeto.classe === I_EMBUTIDOS.Número">
-                <q-input type="number" @click.stop v-model.number="objeto.valor" />
+                <q-input type="number" @click.stop v-model.number="objeto.valor" :label="objeto.nome" />
               </q-item-section>
               <q-item-section v-if="objeto.classe === I_EMBUTIDOS.Lógico">
-                <q-toggle v-model="objeto.valor" label="Lógico" />
+                <q-toggle v-model="objeto.valor" :label="objeto.nome" />
               </q-item-section>
               <q-item-section side>
                 <q-btn flat round icon="more_vert" @click.stop>
@@ -59,12 +62,14 @@
       </q-page>
     </q-page-container>
   </q-layout>
-  <q-dialog v-model="diálogo_adicionar_objeto">
+  <q-dialog v-model="diálogo_adicionar_objeto" @hide="nome_da_propriedade = ''">
     <q-card>
       <q-bar>
-        <span>Adicionar objeto</span>
+        <span v-if="objeto_atual_é(I_EMBUTIDOS.Lista)">Adicionar objeto</span>
+        <span v-if="objeto_atual_é(I_EMBUTIDOS.Objeto)">Adicionar propriedade</span>
       </q-bar>
       <q-card-section class="q-gutter-md">
+        <q-input v-if="objeto_atual_é(I_EMBUTIDOS.Objeto)" v-model="nome_da_propriedade" label="Nome" autofocus />
         <q-list bordered separator>
           <template v-for="(objeto, i) in EMBUTIDOS">
             <q-item clickable v-ripple v-if="objeto.classe === undefined" :active="classe === i" @click="classe = i">
@@ -137,6 +142,7 @@
         classe: I_EMBUTIDOS.Objeto,
         endereço: [],
         objetos: [],
+        nome_da_propriedade: "",
       }
     },
     computed: {
@@ -168,12 +174,24 @@
         }).onsuccess = e => {
           const i_objeto = e.target.result
           objetos.get(this.i_objeto_atual).onsuccess = e => {
-            e.target.result.valor.push(i_objeto)
+            if (this.objeto_atual_é(I_EMBUTIDOS.Lista)) {
+              e.target.result.valor.push(i_objeto)
+            }
+            if (this.objeto_atual_é(I_EMBUTIDOS.Objeto)) {
+              e.target.result.valor[this.nome_da_propriedade] = i_objeto
+            }
             objetos.put(e.target.result, this.i_objeto_atual).onsuccess = e => {
+              let nome
+              if (this.objeto_atual_é(I_EMBUTIDOS.Lista)) {
+                nome = this.EMBUTIDOS[this.classe].nome
+              }
+              if (this.objeto_atual_é(I_EMBUTIDOS.Objeto)) {
+                nome = this.nome_da_propriedade
+              }
               this.objetos.push({
                 classe: this.classe,
                 ícone: this.EMBUTIDOS[this.classe].ícone,
-                nome: this.EMBUTIDOS[this.classe].nome,
+                nome,
                 id: i_objeto,
                 valor: this.EMBUTIDOS[this.classe].valor_padrão,
               })
@@ -198,6 +216,12 @@
           }
         }
       },
+      objeto_atual_é(classe) {
+        return this.objeto_é(this.endereço.at(-1) || this.EMBUTIDOS[this.I_EMBUTIDOS.raiz], classe)
+      },
+      objeto_é(objeto, classe) {
+        return objeto.classe === classe
+      },
     },
     watch: {
       endereço: {
@@ -205,20 +229,38 @@
           this.objetos = []
           const objetos = this.db.transaction(['objetos'], 'readonly').objectStore('objetos')
           objetos.get(this.i_objeto_atual).onsuccess = e => {
-            e.target.result.valor.forEach(i_objeto => {
-              objetos.get(i_objeto).onsuccess = e => {
-                const objeto = e.target.result
-                objetos.get(objeto.classe).onsuccess = e => {
-                  this.objetos.push({
-                    classe: objeto.classe,
-                    ícone: e.target.result.ícone,
-                    nome: this.EMBUTIDOS[objeto.classe].nome,
-                    id: i_objeto,
-                    valor: objeto.valor,
-                  })
+            if (this.objeto_atual_é(this.I_EMBUTIDOS.Lista)) {
+              e.target.result.valor.forEach(i_objeto => {
+                objetos.get(i_objeto).onsuccess = e => {
+                  const objeto = e.target.result
+                  objetos.get(objeto.classe).onsuccess = e => {
+                    this.objetos.push({
+                      classe: objeto.classe,
+                      ícone: e.target.result.ícone,
+                      nome: this.EMBUTIDOS[objeto.classe].nome,
+                      id: i_objeto,
+                      valor: objeto.valor,
+                    })
+                  }
                 }
-              }
-            })
+              })
+            }
+            if (this.objeto_atual_é(this.I_EMBUTIDOS.Objeto)) {
+              Object.entries(e.target.result.valor).forEach(([nome, i_objeto]) => {
+                objetos.get(i_objeto).onsuccess = e => {
+                  const objeto = e.target.result
+                  objetos.get(objeto.classe).onsuccess = e => {
+                    this.objetos.push({
+                      classe: objeto.classe,
+                      ícone: e.target.result.ícone,
+                      nome: nome,
+                      id: i_objeto,
+                      valor: objeto.valor,
+                    })
+                  }
+                }
+              })
+            }
           }
         },
         deep: true,
