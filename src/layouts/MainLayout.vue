@@ -2,11 +2,40 @@
   <q-layout view="lHh Lpr lFf">
     <q-header elevated>
       <q-toolbar>
+        <q-btn flat @click="menu = !menu" round dense icon="menu" />
         <q-toolbar-title>
           Angenda
         </q-toolbar-title>
       </q-toolbar>
     </q-header>
+    <q-drawer v-model="menu" elevated>
+      <q-list>
+        <q-item clickable v-ripple :active="página === 'início'" @click="página = 'início'">
+          <q-item-section avatar>
+            <q-icon name="home" />
+          </q-item-section>
+          <q-item-section>
+            Início
+          </q-item-section>
+        </q-item>
+        <q-item clickable v-ripple :active="página === 'classes'" @click="página = 'classes'">
+          <q-item-section avatar>
+            <q-icon name="class" />
+          </q-item-section>
+          <q-item-section>
+            Classes
+          </q-item-section>
+        </q-item>
+        <q-item clickable v-ripple :active="página === 'lixeira'" @click="página = 'lixeira'">
+          <q-item-section avatar>
+            <q-icon name="delete" />
+          </q-item-section>
+          <q-item-section>
+            Lixeira
+          </q-item-section>
+        </q-item>
+      </q-list>
+    </q-drawer>
     <q-page-container>
       <q-page padding>
         <span>
@@ -140,6 +169,8 @@
       return {
         diálogo_adicionar_objeto: false,
         classe: I_EMBUTIDOS.Objeto,
+        menu: false,
+        página: "início",
         endereço: [],
         objetos: [],
         nome_da_propriedade: "",
