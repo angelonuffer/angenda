@@ -9,7 +9,7 @@
       <q-item-label caption>
         <q-list bordered separator class="rounded-borders">
           <q-item clickable v-ripple v-for="(item, i) in valor" :key="i">
-            <valor :chave="i.toString()" :valor="item" @modificar="modificar(i, $event)" @deletar="deletar(i)" />
+            <valor :chave="chave + '[' + i.toString() + ']'" :valor="item" @modificar="modificar(i, $event)" @deletar="deletar(i)" />
           </q-item>
         </q-list>
       </q-item-label>
