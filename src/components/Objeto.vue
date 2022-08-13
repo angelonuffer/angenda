@@ -1,9 +1,9 @@
 <template>
   <span class="q-gutter-y-md">
     <q-list bordered separator class="rounded-borders">
-      <q-item clickable v-ripple v-for="[chave, valor] in Object.entries(objeto)" :key="chave" @click="ver(chave, valor)">
-        <valor :chave="chave" :valor="valor" @modificar="modificar(chave, $event)" @deletar="deletar(chave)" />
-      </q-item>
+      <template v-for="[chave, valor] in Object.entries(objeto)" :key="chave">
+        <valor :chave="chave" :valor="valor" @ver="ver($event.nome, $event.id)" @modificar="modificar(chave, $event)" @deletar="deletar(chave)" />
+      </template>
     </q-list>
   </span>
   <adicionar-propriedade :ícones="ícones" ref="adicionarPropriedade" @adicionar="adicionar($event)" />
@@ -43,16 +43,14 @@
         delete this.objeto[chave]
         deletar(chave)
       },
-      ver(chave, valor) {
-        if (valor.constructor === Object) {
-          this.$emit('ver', {
-            ícone: 'emoji_objects',
-            nome: chave,
-            id: valor.id,
-          })
-          this.verId(valor.id)
-          objetoAtual.id = valor.id
-        }
+      ver(nome, id) {
+        this.$emit('ver', {
+          ícone: 'emoji_objects',
+          nome,
+          id,
+        })
+        this.verId(id)
+        objetoAtual.id = id
       },
       verId(id) {
         obter(id).then(o => this.objeto = o)
