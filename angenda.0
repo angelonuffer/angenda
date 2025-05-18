@@ -1,0 +1,5 @@
+elemento = (nome atributos conteúdo) => `<${nome}>${conteúdo}</${nome}>`
+
+título = (texto) => elemento("h1" {} texto)
+
+título("Angenda")
