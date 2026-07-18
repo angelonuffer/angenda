@@ -1,0 +1,6 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "angenda",
+  "pages_build_output_dir": "dist/spa",
+  "compatibility_date": "2024-03-20"
+}
