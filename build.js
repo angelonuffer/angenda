@@ -23,4 +23,14 @@ console.log('Copying public assets...');
 fs.copyFileSync(path.join('public', 'index.html'), path.join('dist', 'index.html'));
 fs.copyFileSync(path.join('public', 'app.js'), path.join('dist', 'app.js'));
 
+// Create _redirects file for Cloudflare Pages SPA routing
+console.log('Creating _redirects file for Cloudflare Pages...');
+const redirectRules = [
+    '/tarefas /index.html 200',
+    '/rotinas /index.html 200',
+    '/planos /index.html 200'
+].join('\n') + '\n';
+
+fs.writeFileSync(path.join('dist', '_redirects'), redirectRules, 'utf-8');
+
 console.log('Build completed successfully!');
