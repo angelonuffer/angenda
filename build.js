@@ -12,16 +12,19 @@ if (!fs.existsSync('dist')) {
 // Compile Elm to dist/elm.js
 console.log('Compiling Elm...');
 try {
-    execSync('elm make src/Main.elm --output dist/elm.js --optimize', { stdio: 'inherit' });
+    execSync('npx elm make src/Main.elm --output dist/elm.js --optimize', { stdio: 'inherit' });
 } catch (e) {
     console.warn('Elm compilation with --optimize failed (this is normal in development). Compiling normally...');
-    execSync('elm make src/Main.elm --output dist/elm.js', { stdio: 'inherit' });
+    execSync('npx elm make src/Main.elm --output dist/elm.js', { stdio: 'inherit' });
 }
 
 // Copy public assets
 console.log('Copying public assets...');
 fs.copyFileSync(path.join('public', 'index.html'), path.join('dist', 'index.html'));
 fs.copyFileSync(path.join('public', 'app.js'), path.join('dist', 'app.js'));
+if (fs.existsSync(path.join('public', 'brand-icon.png'))) {
+    fs.copyFileSync(path.join('public', 'brand-icon.png'), path.join('dist', 'brand-icon.png'));
+}
 
 // Create _redirects file for Cloudflare Pages SPA routing
 console.log('Creating _redirects file for Cloudflare Pages...');

@@ -782,14 +782,13 @@ view model =
 
 viewHeader : Route -> Html Msg
 viewHeader currentRoute =
-    header [ class "bg-indigo-600 text-white shadow-md" ]
+    header [ class "bg-red-700 text-white shadow-md" ]
         [ div [ class "max-w-5xl w-full mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-4" ]
             [ a [ href "/tarefas", class "flex items-center gap-2 cursor-pointer text-white no-underline" ]
-                [ svg [ attribute "xmlns" "http://www.w3.org/2000/svg", SvgAttr.fill "none", SvgAttr.viewBox "0 0 24 24", SvgAttr.strokeWidth "2", SvgAttr.stroke "currentColor", SvgAttr.class "w-8 h-8" ]
-                    [ path [ SvgAttr.strokeLinecap "round", SvgAttr.strokeLinejoin "round", SvgAttr.d "M9 12h3.75M9 15h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-.621-.504-1.125-1.125-1.125H9.75M8.25 21h8.25c1.242 0 2.25-1.008 2.25-2.25V5.25C18.75 4.008 17.742 3 16.5 3H8.25C7.008 3 6 4.008 6 5.25v13.5C6 19.992 7.008 21 8.25 21z" ] [] ]
+                [ img [ src "/brand-icon.png", class "w-8 h-8 object-contain" ] []
                 , h1 [ class "text-2xl font-bold tracking-tight" ] [ text "Angenda" ]
                 ]
-            , nav [ class "flex items-center gap-1 bg-indigo-700/50 rounded-lg p-1" ]
+            , nav [ class "flex items-center gap-1 bg-red-800/50 rounded-lg p-1" ]
                 [ viewNavLink "/tarefas" "Tarefas" (currentRoute == Tarefas)
                 , viewNavLink "/rotinas" "Rotinas" (currentRoute == Rotinas)
                 , viewNavLink "/planos" "Planos" (currentRoute == Planos)
@@ -804,10 +803,10 @@ viewNavLink url label isActive =
         , class <|
             "px-4 py-2 rounded-md font-medium text-sm transition-colors "
                 ++ (if isActive then
-                        "bg-white text-indigo-700 shadow-sm"
+                        "bg-white text-red-700 shadow-sm"
 
                     else
-                        "text-indigo-100 hover:bg-indigo-500/40 hover:text-white"
+                        "text-red-100 hover:bg-red-600/40 hover:text-white"
                    )
         ]
         [ text label ]
@@ -843,12 +842,12 @@ viewTarefas model =
                 , placeholder "Adicionar nova tarefa avulsa..."
                 , value model.taskTitleInput
                 , onInput InputTaskTitle
-                , class "flex-1 border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800"
+                , class "flex-1 border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 text-slate-800"
                 ]
                 []
             , button
                 [ type_ "submit"
-                , class "bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-2 rounded-lg transition-colors shadow-sm"
+                , class "bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2 rounded-lg transition-colors shadow-sm"
                 ]
                 [ text "Adicionar" ]
             ]
@@ -878,10 +877,10 @@ viewTaskItem task =
                 , class <|
                     "mt-0.5 w-6 h-6 rounded-full border flex items-center justify-center transition-all "
                         ++ (if task.completed then
-                                "bg-emerald-500 border-emerald-500 text-white"
+                                "bg-amber-500 border-amber-500 text-white"
 
                             else
-                                "border-slate-300 text-transparent hover:border-indigo-500"
+                                "border-slate-300 text-transparent hover:border-red-500"
                            )
                 ]
                 [ svg [ attribute "xmlns" "http://www.w3.org/2000/svg", SvgAttr.fill "none", SvgAttr.viewBox "0 0 24 24", SvgAttr.strokeWidth "3", SvgAttr.stroke "currentColor", SvgAttr.class "w-3 h-3" ]
@@ -927,12 +926,12 @@ viewOriginBadge origin =
             routineTitle =
                 String.dropLeft (String.length "rotina:") origin
         in
-        span [ class "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100" ]
+        span [ class "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-semibold bg-red-50 text-red-700 border border-red-100" ]
             [ text <| "Rotina: " ++ routineTitle ]
 
     else if String.startsWith "plano:" origin then
         -- Format "plano:planId:planTaskId" -> we can just display "Plano"
-        span [ class "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-100" ]
+        span [ class "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-100" ]
             [ text "Plano" ]
 
     else
@@ -961,7 +960,7 @@ viewRotinas model =
                         , placeholder "Ex: Beber 2L de água, Fazer academia..."
                         , value model.routineTitleInput
                         , onInput InputRoutineTitle
-                        , class "w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800"
+                        , class "w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 text-slate-800"
                         ]
                         []
                     ]
@@ -971,7 +970,7 @@ viewRotinas model =
                         [ id "new-routine-recurrence"
                         , value model.routineRecurrenceInput
                         , onInput InputRoutineRecurrence
-                        , class "w-full border border-slate-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800"
+                        , class "w-full border border-slate-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 text-slate-800"
                         ]
                         [ option [ value "Diária" ] [ text "Diária" ]
                         , option [ value "Semanal" ] [ text "Semanal" ]
@@ -982,7 +981,7 @@ viewRotinas model =
             , div [ class "flex justify-end" ]
                 [ button
                     [ type_ "submit"
-                    , class "bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-2 rounded-lg transition-colors shadow-sm"
+                    , class "bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2 rounded-lg transition-colors shadow-sm"
                     ]
                     [ text "Criar Rotina" ]
                 ]
@@ -1020,15 +1019,15 @@ viewRoutineItem routine =
                     ]
                 ]
             , div [ class "flex items-center gap-1.5" ]
-                [ svg [ attribute "xmlns" "http://www.w3.org/2000/svg", SvgAttr.fill "none", SvgAttr.viewBox "0 0 24 24", SvgAttr.strokeWidth "2", SvgAttr.stroke "currentColor", SvgAttr.class "w-4 h-4 text-indigo-500" ]
+                [ svg [ attribute "xmlns" "http://www.w3.org/2000/svg", SvgAttr.fill "none", SvgAttr.viewBox "0 0 24 24", SvgAttr.strokeWidth "2", SvgAttr.stroke "currentColor", SvgAttr.class "w-4 h-4 text-red-500" ]
                     [ path [ SvgAttr.strokeLinecap "round", SvgAttr.strokeLinejoin "round", SvgAttr.d "M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" ] [] ]
-                , span [ class "text-xs font-semibold text-indigo-600 uppercase tracking-wider" ] [ text routine.recurrence ]
+                , span [ class "text-xs font-semibold text-red-600 uppercase tracking-wider" ] [ text routine.recurrence ]
                 ]
             ]
         , button
             [ type_ "button"
             , onClick (GenerateTaskFromRoutine routine)
-            , class "w-full bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 text-indigo-600 hover:text-indigo-700 font-semibold py-2 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
+            , class "w-full bg-slate-50 hover:bg-red-50 border border-slate-200 hover:border-red-200 text-red-600 hover:text-red-700 font-semibold py-2 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
             ]
             [ svg [ attribute "xmlns" "http://www.w3.org/2000/svg", SvgAttr.fill "none", SvgAttr.viewBox "0 0 24 24", SvgAttr.strokeWidth "2", SvgAttr.stroke "currentColor", SvgAttr.class "w-4 h-4" ]
                 [ path [ SvgAttr.strokeLinecap "round", SvgAttr.strokeLinejoin "round", SvgAttr.d "M12 4.5v15m7.5-7.5h-15" ] [] ]
@@ -1058,7 +1057,7 @@ viewPlanos model =
                         , placeholder "Ex: Aprender Alemão, Organizar Viagem de Férias..."
                         , value model.planTitleInput
                         , onInput InputPlanTitle
-                        , class "w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800"
+                        , class "w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 text-slate-800"
                         ]
                         []
                     ]
@@ -1069,7 +1068,7 @@ viewPlanos model =
                         , placeholder "Descreva o objetivo do plano..."
                         , value model.planDescInput
                         , onInput InputPlanDesc
-                        , class "w-full border border-slate-300 rounded-lg px-4 py-2 h-20 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800"
+                        , class "w-full border border-slate-300 rounded-lg px-4 py-2 h-20 focus:outline-none focus:ring-2 focus:ring-red-500 text-slate-800"
                         ]
                         []
                     ]
@@ -1077,7 +1076,7 @@ viewPlanos model =
             , div [ class "flex justify-end" ]
                 [ button
                     [ type_ "submit"
-                    , class "bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-2 rounded-lg transition-colors shadow-sm"
+                    , class "bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2 rounded-lg transition-colors shadow-sm"
                     ]
                     [ text "Criar Plano" ]
                 ]
@@ -1125,7 +1124,7 @@ viewPlanItem model plan =
                 , if totalTasks > 0 then
                     div [ class "flex items-center gap-3 mt-2" ]
                         [ div [ class "w-24 bg-slate-200 rounded-full h-2 overflow-hidden" ]
-                            [ div [ class "bg-emerald-500 h-full rounded-full transition-all duration-300", style "width" (String.fromInt progressPercent ++ "%") ] [] ]
+                            [ div [ class "bg-amber-500 h-full rounded-full transition-all duration-300", style "width" (String.fromInt progressPercent ++ "%") ] [] ]
                         , span [ class "text-xs font-semibold text-slate-600" ] [ text (String.fromInt completedTasks ++ "/" ++ String.fromInt totalTasks ++ " concluídas (" ++ String.fromInt progressPercent ++ "%)") ]
                         ]
 
@@ -1140,7 +1139,7 @@ viewPlanItem model plan =
                     , class <|
                         "font-semibold text-sm px-4 py-2 rounded-lg border transition-colors "
                             ++ (if isEditing then
-                                    "bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100"
+                                    "bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
 
                                 else
                                     "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
@@ -1172,13 +1171,13 @@ viewPlanItem model plan =
                         , placeholder "Insira o próximo passo do plano..."
                         , value model.newPlanTaskTitle
                         , onInput InputPlanTaskTitle
-                        , class "flex-1 border border-slate-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm text-slate-800"
+                        , class "flex-1 border border-slate-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm text-slate-800"
                         ]
                         []
                     , button
                         [ type_ "submit"
                         , id "add-plan-task-btn"
-                        , class "bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-1.5 rounded-lg text-sm transition-colors"
+                        , class "bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-1.5 rounded-lg text-sm transition-colors"
                         ]
                         [ text "Adicionar" ]
                     ]
@@ -1197,7 +1196,7 @@ viewPlanItem model plan =
 
 viewPlanTaskItem : String -> Int -> PlanTask -> Html Msg
 viewPlanTaskItem planId index pt =
-    li [ class <| "p-3 flex items-center justify-between gap-3 text-sm " ++ if pt.completed then "opacity-70 bg-emerald-50/10" else "" ]
+    li [ class <| "p-3 flex items-center justify-between gap-3 text-sm " ++ if pt.completed then "opacity-70 bg-amber-50/10" else "" ]
         [ div [ class "flex items-center gap-2" ]
             [ button
                 [ type_ "button"
@@ -1205,10 +1204,10 @@ viewPlanTaskItem planId index pt =
                 , class <|
                     "w-5 h-5 rounded-full border flex items-center justify-center transition-all "
                         ++ (if pt.completed then
-                                "bg-emerald-500 border-emerald-500 text-white"
+                                "bg-amber-500 border-amber-500 text-white"
 
                             else
-                                "border-slate-300 text-transparent hover:border-indigo-500"
+                                "border-slate-300 text-transparent hover:border-red-500"
                            )
                 ]
                 [ svg [ attribute "xmlns" "http://www.w3.org/2000/svg", SvgAttr.fill "none", SvgAttr.viewBox "0 0 24 24", SvgAttr.strokeWidth "3", SvgAttr.stroke "currentColor", SvgAttr.class "w-2.5 h-2.5" ]
