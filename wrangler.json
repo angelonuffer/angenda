@@ -1,0 +1,10 @@
+{
+  "name": "angenda",
+  "compatibility_date": "2026-07-05",
+  "assets": {
+    "directory": "./dist"
+  },
+  "build": {
+    "command": "npm run build"
+  }
+}
