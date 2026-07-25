@@ -55,6 +55,12 @@ server.listen(PORT, async () => {
 
         const page = await context.newPage();
 
+        // Implement custom toHaveScreenshot method on page
+        page.toHaveScreenshot = async function (screenshotPath, options = {}) {
+            await this.screenshot({ path: screenshotPath, fullPage: false, ...options });
+            console.log(`Saved ${screenshotPath}`);
+        };
+
         // Listen for console logs and page errors
         page.on('console', msg => console.log('PAGE LOG:', msg.text()));
         page.on('pageerror', err => console.error('PAGE ERROR:', err.stack || err.message));
@@ -144,8 +150,7 @@ server.listen(PORT, async () => {
                 await page.waitForTimeout(200); // Allow render adjustment
 
                 const screenshotPath = path.join(dir, `${layout}.png`);
-                await page.screenshot({ path: screenshotPath, fullPage: false });
-                console.log(`Saved ${screenshotPath}`);
+                await page.toHaveScreenshot(screenshotPath);
             }
         }
 
