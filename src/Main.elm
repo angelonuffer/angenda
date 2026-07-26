@@ -789,19 +789,19 @@ viewHeader currentRoute =
                 , h1 [ class "text-2xl font-bold tracking-tight" ] [ text "Angenda" ]
                 ]
             , nav [ class "flex items-center gap-1 bg-red-800/50 rounded-lg p-1" ]
-                [ viewNavLink "/tarefas" "Tarefas" (currentRoute == Tarefas)
-                , viewNavLink "/rotinas" "Rotinas" (currentRoute == Rotinas)
-                , viewNavLink "/planos" "Planos" (currentRoute == Planos)
+                [ viewNavLink "/tarefas" "playlist_add_check" "Tarefas" (currentRoute == Tarefas)
+                , viewNavLink "/rotinas" "repeat" "Rotinas" (currentRoute == Rotinas)
+                , viewNavLink "/planos" "schema" "Planos" (currentRoute == Planos)
                 ]
             ]
         ]
 
-viewNavLink : String -> String -> Bool -> Html Msg
-viewNavLink url label isActive =
+viewNavLink : String -> String -> String -> Bool -> Html Msg
+viewNavLink url iconName label isActive =
     a
         [ href url
         , class <|
-            "px-4 py-2 rounded-md font-medium text-sm transition-colors "
+            "flex items-center gap-1.5 px-4 py-2 rounded-md font-medium text-sm transition-colors "
                 ++ (if isActive then
                         "bg-white text-red-700 shadow-sm"
 
@@ -809,7 +809,9 @@ viewNavLink url label isActive =
                         "text-red-100 hover:bg-red-600/40 hover:text-white"
                    )
         ]
-        [ text label ]
+        [ span [ class "material-symbols-outlined", style "font-size" "18px" ] [ text iconName ]
+        , text label
+        ]
 
 
 -- FOOTER
@@ -855,8 +857,7 @@ viewTarefas model =
           div [ class "bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden" ]
             [ if List.isEmpty model.tasks then
                 div [ class "p-12 text-center space-y-3" ]
-                    [ svg [ attribute "xmlns" "http://www.w3.org/2000/svg", SvgAttr.fill "none", SvgAttr.viewBox "0 0 24 24", SvgAttr.strokeWidth "1.5", SvgAttr.stroke "currentColor", SvgAttr.class "w-12 h-12 text-slate-300 mx-auto" ]
-                        [ path [ SvgAttr.strokeLinecap "round", SvgAttr.strokeLinejoin "round", SvgAttr.d "M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" ] [] ]
+                    [ span [ class "material-symbols-outlined text-slate-300 text-5xl block mx-auto" ] [ text "task_alt" ]
                     , h3 [ class "text-lg font-medium text-slate-700" ] [ text "Nenhuma tarefa encontrada" ]
                     , p [ class "text-slate-500 text-sm max-w-md mx-auto" ] [ text "Crie tarefas avulsas no formulário acima ou gere tarefas a partir de suas rotinas ou planos!" ]
                     ]
@@ -883,9 +884,7 @@ viewTaskItem task =
                                 "border-slate-300 text-transparent hover:border-red-500"
                            )
                 ]
-                [ svg [ attribute "xmlns" "http://www.w3.org/2000/svg", SvgAttr.fill "none", SvgAttr.viewBox "0 0 24 24", SvgAttr.strokeWidth "3", SvgAttr.stroke "currentColor", SvgAttr.class "w-3 h-3" ]
-                    [ path [ SvgAttr.strokeLinecap "round", SvgAttr.strokeLinejoin "round", SvgAttr.d "M4.5 12.75l6 6 9-13.5" ] [] ]
-                ]
+                [ span [ class "material-symbols-outlined", style "font-size" "14px", style "font-weight" "bold" ] [ text "check" ] ]
             , div [ class "space-y-1" ]
                 [ p
                     [ class <|
@@ -907,19 +906,19 @@ viewTaskItem task =
         , button
             [ type_ "button"
             , onClick (DeleteTaskAction task.id)
-            , class "text-slate-400 hover:text-rose-600 p-2 rounded-lg hover:bg-rose-50 transition-all"
+            , class "text-slate-400 hover:text-rose-600 p-2 rounded-lg hover:bg-rose-50 transition-all flex items-center justify-center"
             , title "Excluir Tarefa"
             ]
-            [ svg [ attribute "xmlns" "http://www.w3.org/2000/svg", SvgAttr.fill "none", SvgAttr.viewBox "0 0 24 24", SvgAttr.strokeWidth "1.5", SvgAttr.stroke "currentColor", SvgAttr.class "w-5 h-5" ]
-                [ path [ SvgAttr.strokeLinecap "round", SvgAttr.strokeLinejoin "round", SvgAttr.d "M14.74 9l-.346 9m-4.788 0L9.24 9m4.768-6.897L14.04 7 12.42 15.6 10.8 7 10.192 2.103a1.85 1.85 0 00-3.328 0L6.26 7h11.48zM4.5 7.5h15" ] [] ]
-            ]
+            [ span [ class "material-symbols-outlined", style "font-size" "20px" ] [ text "delete" ] ]
         ]
 
 viewOriginBadge : String -> Html Msg
 viewOriginBadge origin =
     if origin == "avulsa" then
         span [ class "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-semibold bg-slate-100 text-slate-600" ]
-            [ text "Avulsa" ]
+            [ span [ class "material-symbols-outlined", style "font-size" "12px" ] [ text "push_pin" ]
+            , text "Avulsa"
+            ]
 
     else if String.startsWith "rotina:" origin then
         let
@@ -927,12 +926,16 @@ viewOriginBadge origin =
                 String.dropLeft (String.length "rotina:") origin
         in
         span [ class "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-semibold bg-red-50 text-red-700 border border-red-100" ]
-            [ text <| "Rotina: " ++ routineTitle ]
+            [ span [ class "material-symbols-outlined", style "font-size" "12px" ] [ text "repeat" ]
+            , text <| "Rotina: " ++ routineTitle
+            ]
 
     else if String.startsWith "plano:" origin then
         -- Format "plano:planId:planTaskId" -> we can just display "Plano"
         span [ class "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-100" ]
-            [ text "Plano" ]
+            [ span [ class "material-symbols-outlined", style "font-size" "12px" ] [ text "schema" ]
+            , text "Plano"
+            ]
 
     else
         span [ class "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-semibold bg-slate-100 text-slate-600" ]
@@ -990,8 +993,7 @@ viewRotinas model =
           div [ class "grid grid-cols-1 md:grid-cols-2 gap-4" ]
             [ if List.isEmpty model.routines then
                 div [ class "col-span-full bg-white p-12 text-center space-y-3 rounded-xl border border-slate-200 shadow-sm" ]
-                    [ svg [ attribute "xmlns" "http://www.w3.org/2000/svg", SvgAttr.fill "none", SvgAttr.viewBox "0 0 24 24", SvgAttr.strokeWidth "1.5", SvgAttr.stroke "currentColor", SvgAttr.class "w-12 h-12 text-slate-300 mx-auto" ]
-                        [ path [ SvgAttr.strokeLinecap "round", SvgAttr.strokeLinejoin "round", SvgAttr.d "M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" ] [] ]
+                    [ span [ class "material-symbols-outlined text-slate-300 text-5xl block mx-auto" ] [ text "autorenew" ]
                     , h3 [ class "text-lg font-medium text-slate-700" ] [ text "Nenhuma rotina configurada" ]
                     , p [ class "text-slate-500 text-sm max-w-md mx-auto" ] [ text "Adicione rotinas para tarefas diárias, semanais ou mensais usando o formulário acima!" ]
                     ]
@@ -1011,16 +1013,13 @@ viewRoutineItem routine =
                 , button
                     [ type_ "button"
                     , onClick (DeleteRoutineAction routine.id)
-                    , class "text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-all"
+                    , class "text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-all flex items-center justify-center"
                     , title "Excluir Rotina"
                     ]
-                    [ svg [ attribute "xmlns" "http://www.w3.org/2000/svg", SvgAttr.fill "none", SvgAttr.viewBox "0 0 24 24", SvgAttr.strokeWidth "1.5", SvgAttr.stroke "currentColor", SvgAttr.class "w-4 h-4" ]
-                        [ path [ SvgAttr.strokeLinecap "round", SvgAttr.strokeLinejoin "round", SvgAttr.d "M14.74 9l-.346 9m-4.788 0L9.24 9m4.768-6.897L14.04 7 12.42 15.6 10.8 7 10.192 2.103a1.85 1.85 0 00-3.328 0L6.26 7h11.48zM4.5 7.5h15" ] [] ]
-                    ]
+                    [ span [ class "material-symbols-outlined", style "font-size" "18px" ] [ text "delete" ] ]
                 ]
             , div [ class "flex items-center gap-1.5" ]
-                [ svg [ attribute "xmlns" "http://www.w3.org/2000/svg", SvgAttr.fill "none", SvgAttr.viewBox "0 0 24 24", SvgAttr.strokeWidth "2", SvgAttr.stroke "currentColor", SvgAttr.class "w-4 h-4 text-red-500" ]
-                    [ path [ SvgAttr.strokeLinecap "round", SvgAttr.strokeLinejoin "round", SvgAttr.d "M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" ] [] ]
+                [ span [ class "material-symbols-outlined text-red-500", style "font-size" "18px" ] [ text "repeat" ]
                 , span [ class "text-xs font-semibold text-red-600 uppercase tracking-wider" ] [ text routine.recurrence ]
                 ]
             ]
@@ -1029,8 +1028,7 @@ viewRoutineItem routine =
             , onClick (GenerateTaskFromRoutine routine)
             , class "w-full bg-slate-50 hover:bg-red-50 border border-slate-200 hover:border-red-200 text-red-600 hover:text-red-700 font-semibold py-2 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
             ]
-            [ svg [ attribute "xmlns" "http://www.w3.org/2000/svg", SvgAttr.fill "none", SvgAttr.viewBox "0 0 24 24", SvgAttr.strokeWidth "2", SvgAttr.stroke "currentColor", SvgAttr.class "w-4 h-4" ]
-                [ path [ SvgAttr.strokeLinecap "round", SvgAttr.strokeLinejoin "round", SvgAttr.d "M12 4.5v15m7.5-7.5h-15" ] [] ]
+            [ span [ class "material-symbols-outlined", style "font-size" "18px" ] [ text "add" ]
             , text "Gerar Tarefa"
             ]
         ]
@@ -1085,8 +1083,7 @@ viewPlanos model =
           div [ class "space-y-4" ]
             [ if List.isEmpty model.plans then
                 div [ class "bg-white p-12 text-center space-y-3 rounded-xl border border-slate-200 shadow-sm" ]
-                    [ svg [ attribute "xmlns" "http://www.w3.org/2000/svg", SvgAttr.fill "none", SvgAttr.viewBox "0 0 24 24", SvgAttr.strokeWidth "1.5", SvgAttr.stroke "currentColor", SvgAttr.class "w-12 h-12 text-slate-300 mx-auto" ]
-                        [ path [ SvgAttr.strokeLinecap "round", SvgAttr.strokeLinejoin "round", SvgAttr.d "M9 12h3.75M9 15h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-.621-.504-1.125-1.125-1.125H9.75M8.25 21h8.25c1.242 0 2.25-1.008 2.25-2.25V5.25C18.75 4.008 17.742 3 16.5 3H8.25C7.008 3 6 4.008 6 5.25v13.5C6 19.992 7.008 21 8.25 21z" ] [] ]
+                    [ span [ class "material-symbols-outlined text-slate-300 text-5xl block mx-auto" ] [ text "schema" ]
                     , h3 [ class "text-lg font-medium text-slate-700" ] [ text "Nenhum plano cadastrado" ]
                     , p [ class "text-slate-500 text-sm max-w-md mx-auto" ] [ text "Comece criando um plano no formulário acima para estruturar sua jornada!" ]
                     ]
@@ -1149,12 +1146,10 @@ viewPlanItem model plan =
                 , button
                     [ type_ "button"
                     , onClick (DeletePlanAction plan.id)
-                    , class "text-slate-400 hover:text-rose-600 p-2 rounded-lg hover:bg-rose-50 transition-all"
+                    , class "text-slate-400 hover:text-rose-600 p-2 rounded-lg hover:bg-rose-50 transition-all flex items-center justify-center"
                     , title "Excluir Plano"
                     ]
-                    [ svg [ attribute "xmlns" "http://www.w3.org/2000/svg", SvgAttr.fill "none", SvgAttr.viewBox "0 0 24 24", SvgAttr.strokeWidth "1.5", SvgAttr.stroke "currentColor", SvgAttr.class "w-5 h-5" ]
-                        [ path [ SvgAttr.strokeLinecap "round", SvgAttr.strokeLinejoin "round", SvgAttr.d "M14.74 9l-.346 9m-4.788 0L9.24 9m4.768-6.897L14.04 7 12.42 15.6 10.8 7 10.192 2.103a1.85 1.85 0 00-3.328 0L6.26 7h11.48zM4.5 7.5h15" ] [] ]
-                    ]
+                    [ span [ class "material-symbols-outlined", style "font-size" "20px" ] [ text "delete" ] ]
                 ]
             ]
         , if isEditing then
@@ -1210,19 +1205,15 @@ viewPlanTaskItem planId index pt =
                                 "border-slate-300 text-transparent hover:border-red-500"
                            )
                 ]
-                [ svg [ attribute "xmlns" "http://www.w3.org/2000/svg", SvgAttr.fill "none", SvgAttr.viewBox "0 0 24 24", SvgAttr.strokeWidth "3", SvgAttr.stroke "currentColor", SvgAttr.class "w-2.5 h-2.5" ]
-                    [ path [ SvgAttr.strokeLinecap "round", SvgAttr.strokeLinejoin "round", SvgAttr.d "M4.5 12.75l6 6 9-13.5" ] [] ]
-                ]
+                [ span [ class "material-symbols-outlined", style "font-size" "12px", style "font-weight" "bold" ] [ text "check" ] ]
             , span [ class "font-semibold text-slate-400" ] [ text (String.fromInt (index + 1) ++ ".") ]
             , span [ class <| "font-medium " ++ if pt.completed then "line-through text-slate-400" else "text-slate-700" ] [ text pt.title ]
             ]
         , button
             [ type_ "button"
             , onClick (DeletePlanTask planId pt.id)
-            , class "text-slate-400 hover:text-rose-600 p-1 rounded-lg hover:bg-rose-50 transition-all"
+            , class "text-slate-400 hover:text-rose-600 p-1 rounded-lg hover:bg-rose-50 transition-all flex items-center justify-center"
             , title "Excluir Passo"
             ]
-            [ svg [ attribute "xmlns" "http://www.w3.org/2000/svg", SvgAttr.fill "none", SvgAttr.viewBox "0 0 24 24", SvgAttr.strokeWidth "1.5", SvgAttr.stroke "currentColor", SvgAttr.class "w-4 h-4" ]
-                [ path [ SvgAttr.strokeLinecap "round", SvgAttr.strokeLinejoin "round", SvgAttr.d "M14.74 9l-.346 9m-4.788 0L9.24 9m4.768-6.897L14.04 7 12.42 15.6 10.8 7 10.192 2.103a1.85 1.85 0 00-3.328 0L6.26 7h11.48zM4.5 7.5h15" ] [] ]
-            ]
+            [ span [ class "material-symbols-outlined", style "font-size" "18px" ] [ text "delete" ] ]
         ]
