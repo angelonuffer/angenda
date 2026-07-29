@@ -1,29 +1,21 @@
-port module Main exposing (main)
+module Main exposing (main)
 
 import Browser exposing (Document)
 import Browser.Navigation as Nav
+import Data.Plan as Plan exposing (Plan, PlanTask)
+import Data.Routine as Routine exposing (Routine)
+import Data.Task as Task exposing (Task)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
-import Json.Decode as Decode exposing (Decoder)
-import Json.Encode as Encode
-import Svg exposing (svg, path)
-import Svg.Attributes as SvgAttr
+import Json.Decode as Decode
+import Pages.Planos exposing (viewPlanos)
+import Pages.Rotinas exposing (viewRotinas)
+import Pages.Tarefas exposing (viewTarefas)
+import Ports
+import Route exposing (Route(..))
+import Types exposing (Model, Msg(..))
 import Url exposing (Url)
-import Url.Parser as Parser exposing ((</>), Parser, top)
-
-
--- PORTS
-
-port loadData : () -> Cmd msg
-port saveTask : Encode.Value -> Cmd msg
-port deleteTask : String -> Cmd msg
-port saveRoutine : Encode.Value -> Cmd msg
-port deleteRoutine : String -> Cmd msg
-port savePlan : Encode.Value -> Cmd msg
-port deletePlan : String -> Cmd msg
-
-port dataLoaded : (Decode.Value -> msg) -> Sub msg
 
 
 -- MAIN
@@ -40,61 +32,10 @@ main =
         }
 
 
--- MODEL
-
-type Route
-    = Tarefas
-    | Rotinas
-    | Planos
-
-type alias Task =
-    { id : String
-    , title : String
-    , completed : Bool
-    , origin : String -- e.g. "avulsa", "rotina:id:title", "plano:id:taskId:title"
-    , createdAt : String
-    }
-
-type alias Routine =
-    { id : String
-    , title : String
-    , recurrence : String -- "Diária", "Semanal", "Mensal"
-    }
-
-type alias PlanTask =
-    { id : String
-    , title : String
-    , completed : Bool
-    }
-
-type alias Plan =
-    { id : String
-    , title : String
-    , description : String
-    , tasks : List PlanTask
-    }
-
-type alias Model =
-    { key : Nav.Key
-    , route : Route
-    , tasks : List Task
-    , routines : List Routine
-    , plans : List Plan
-    -- Form States
-    , taskTitleInput : String
-    , routineTitleInput : String
-    , routineRecurrenceInput : String
-    , planTitleInput : String
-    , planDescInput : String
-    , editingPlanId : Maybe String
-    , newPlanTaskTitle : String
-    }
-
-
 init : () -> Url -> Nav.Key -> ( Model, Cmd Msg )
 init _ url key =
     ( { key = key
-      , route = fromUrl url
+      , route = Route.fromUrl url
       , tasks = []
       , routines = []
       , plans = []
@@ -106,136 +47,11 @@ init _ url key =
       , editingPlanId = Nothing
       , newPlanTaskTitle = ""
       }
-    , loadData ()
+    , Ports.loadData ()
     )
 
 
--- ROUTING
-
-routeParser : Parser (Route -> a) a
-routeParser =
-    Parser.oneOf
-        [ Parser.map Tarefas top
-        , Parser.map Tarefas (Parser.s "tarefas")
-        , Parser.map Rotinas (Parser.s "rotinas")
-        , Parser.map Planos (Parser.s "planos")
-        ]
-
-fromUrl : Url -> Route
-fromUrl url =
-    Parser.parse routeParser url |> Maybe.withDefault Tarefas
-
-
--- JSON ENCODERS & DECODERS
-
-encodeTask : Task -> Encode.Value
-encodeTask task =
-    Encode.object
-        [ ( "id", Encode.string task.id )
-        , ( "title", Encode.string task.title )
-        , ( "completed", Encode.bool task.completed )
-        , ( "origin", Encode.string task.origin )
-        , ( "createdAt", Encode.string task.createdAt )
-        ]
-
-taskDecoder : Decoder Task
-taskDecoder =
-    Decode.map5 Task
-        (Decode.field "id" Decode.string)
-        (Decode.field "title" Decode.string)
-        (Decode.field "completed" Decode.bool)
-        (Decode.field "origin" Decode.string)
-        (Decode.field "createdAt" Decode.string)
-
-encodeRoutine : Routine -> Encode.Value
-encodeRoutine routine =
-    Encode.object
-        [ ( "id", Encode.string routine.id )
-        , ( "title", Encode.string routine.title )
-        , ( "recurrence", Encode.string routine.recurrence )
-        ]
-
-routineDecoder : Decoder Routine
-routineDecoder =
-    Decode.map3 Routine
-        (Decode.field "id" Decode.string)
-        (Decode.field "title" Decode.string)
-        (Decode.field "recurrence" Decode.string)
-
-encodePlanTask : PlanTask -> Encode.Value
-encodePlanTask planTask =
-    Encode.object
-        [ ( "id", Encode.string planTask.id )
-        , ( "title", Encode.string planTask.title )
-        , ( "completed", Encode.bool planTask.completed )
-        ]
-
-planTaskDecoder : Decoder PlanTask
-planTaskDecoder =
-    Decode.map3 PlanTask
-        (Decode.field "id" Decode.string)
-        (Decode.field "title" Decode.string)
-        (Decode.field "completed" Decode.bool)
-
-encodePlan : Plan -> Encode.Value
-encodePlan plan =
-    Encode.object
-        [ ( "id", Encode.string plan.id )
-        , ( "title", Encode.string plan.title )
-        , ( "description", Encode.string plan.description )
-        , ( "tasks", Encode.list encodePlanTask plan.tasks )
-        ]
-
-planDecoder : Decoder Plan
-planDecoder =
-    Decode.map4 Plan
-        (Decode.field "id" Decode.string)
-        (Decode.field "title" Decode.string)
-        (Decode.field "description" Decode.string)
-        (Decode.field "tasks" (Decode.list planTaskDecoder))
-
-type alias LoadedDataPayload =
-    { tasks : List Task
-    , routines : List Routine
-    , plans : List Plan
-    }
-
-loadedDataDecoder : Decoder LoadedDataPayload
-loadedDataDecoder =
-    Decode.map3 LoadedDataPayload
-        (Decode.field "tasks" (Decode.list taskDecoder))
-        (Decode.field "routines" (Decode.list routineDecoder))
-        (Decode.field "plans" (Decode.list planDecoder))
-
-
 -- UPDATE
-
-type Msg
-    = LinkClicked Browser.UrlRequest
-    | UrlChanged Url
-    | DataLoadedRaw Decode.Value
-    -- Form Inputs
-    | InputTaskTitle String
-    | InputRoutineTitle String
-    | InputRoutineRecurrence String
-    | InputPlanTitle String
-    | InputPlanDesc String
-    | InputPlanTaskTitle String
-    -- Actions
-    | CreateTask
-    | ToggleTask String
-    | DeleteTaskAction String
-    | CreateRoutine
-    | DeleteRoutineAction String
-    | GenerateTaskFromRoutine Routine
-    | CreatePlan
-    | DeletePlanAction String
-    | StartEditPlan String
-    | StopEditPlan
-    | AddPlanTask String
-    | TogglePlanTask String String
-    | DeletePlanTask String String
-
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -249,10 +65,10 @@ update msg model =
                     ( model, Nav.load href )
 
         UrlChanged url ->
-            ( { model | route = fromUrl url }, Cmd.none )
+            ( { model | route = Route.fromUrl url }, Cmd.none )
 
         DataLoadedRaw rawValue ->
-            case Decode.decodeValue loadedDataDecoder rawValue of
+            case Decode.decodeValue Types.loadedDataDecoder rawValue of
                 Ok payload ->
                     ( { model
                         | tasks = payload.tasks
@@ -303,7 +119,7 @@ update msg model =
                         }
                 in
                 ( { model | tasks = model.tasks ++ [ newTask ], taskTitleInput = "" }
-                , saveTask (encodeTask newTask)
+                , Ports.saveTask (Task.encodeTask newTask)
                 )
 
         ToggleTask id ->
@@ -364,7 +180,7 @@ update msg model =
                                     in
                                     case maybePlan of
                                         Just plan ->
-                                            savePlan (encodePlan plan)
+                                            Ports.savePlan (Plan.encodePlan plan)
 
                                         Nothing ->
                                             Cmd.none
@@ -404,7 +220,7 @@ update msg model =
                             { task | completed = newCompletedStatus }
                     in
                     ( { model | tasks = updatedTasks, plans = newPlans }
-                    , Cmd.batch [ saveTask (encodeTask updatedTask), planSyncCmd ]
+                    , Cmd.batch [ Ports.saveTask (Task.encodeTask updatedTask), planSyncCmd ]
                     )
 
                 Nothing ->
@@ -445,7 +261,7 @@ update msg model =
                                     in
                                     case maybePlan of
                                         Just plan ->
-                                            savePlan (encodePlan plan)
+                                            Ports.savePlan (Plan.encodePlan plan)
 
                                         Nothing ->
                                             Cmd.none
@@ -482,7 +298,7 @@ update msg model =
                             model.plans
             in
             ( { model | tasks = newTasks, plans = newPlans }
-            , Cmd.batch [ deleteTask id, planSyncCmd ]
+            , Cmd.batch [ Ports.deleteTask id, planSyncCmd ]
             )
 
         CreateRoutine ->
@@ -502,12 +318,12 @@ update msg model =
                         }
                 in
                 ( { model | routines = model.routines ++ [ newRoutine ], routineTitleInput = "" }
-                , saveRoutine (encodeRoutine newRoutine)
+                , Ports.saveRoutine (Routine.encodeRoutine newRoutine)
                 )
 
         DeleteRoutineAction id ->
             ( { model | routines = List.filter (\r -> r.id /= id) model.routines }
-            , deleteRoutine id
+            , Ports.deleteRoutine id
             )
 
         GenerateTaskFromRoutine routine ->
@@ -524,7 +340,7 @@ update msg model =
                     }
             in
             ( { model | tasks = model.tasks ++ [ newTask ] }
-            , saveTask (encodeTask newTask)
+            , Ports.saveTask (Task.encodeTask newTask)
             )
 
         CreatePlan ->
@@ -549,7 +365,7 @@ update msg model =
                     , planTitleInput = ""
                     , planDescInput = ""
                   }
-                , savePlan (encodePlan newPlan)
+                , Ports.savePlan (Plan.encodePlan newPlan)
                 )
 
         DeletePlanAction id ->
@@ -566,10 +382,10 @@ update msg model =
                 deletedTasksCmds =
                     model.tasks
                         |> List.filter (\t -> String.startsWith ("plano:" ++ id ++ ":") t.origin)
-                        |> List.map (\t -> deleteTask t.id)
+                        |> List.map (\t -> Ports.deleteTask t.id)
             in
             ( { model | plans = List.filter (\p -> p.id /= id) model.plans, tasks = newTasks }
-            , Cmd.batch (deletePlan id :: deletedTasksCmds)
+            , Cmd.batch (Ports.deletePlan id :: deletedTasksCmds)
             )
 
         StartEditPlan id ->
@@ -626,8 +442,8 @@ update msg model =
                             , newPlanTaskTitle = ""
                           }
                         , Cmd.batch
-                            [ savePlan (encodePlan plan)
-                            , saveTask (encodeTask newTask)
+                            [ Ports.savePlan (Plan.encodePlan plan)
+                            , Ports.saveTask (Task.encodeTask newTask)
                             ]
                         )
 
@@ -688,13 +504,13 @@ update msg model =
                         taskCmd =
                             case maybeTask of
                                 Just task ->
-                                    saveTask (encodeTask { task | completed = completedStatus })
+                                    Ports.saveTask (Task.encodeTask { task | completed = completedStatus })
 
                                 Nothing ->
                                     Cmd.none
                     in
                     ( { model | plans = updatedPlans, tasks = updatedTasks }
-                    , Cmd.batch [ savePlan (encodePlan plan), taskCmd ]
+                    , Cmd.batch [ Ports.savePlan (Plan.encodePlan plan), taskCmd ]
                     )
 
                 Nothing ->
@@ -731,7 +547,7 @@ update msg model =
                 deleteTaskCmd =
                     case maybeTaskToDelete of
                         Just task ->
-                            deleteTask task.id
+                            Ports.deleteTask task.id
 
                         Nothing ->
                             Cmd.none
@@ -739,7 +555,7 @@ update msg model =
             case maybePlan of
                 Just plan ->
                     ( { model | plans = updatedPlans, tasks = newTasks }
-                    , Cmd.batch [ savePlan (encodePlan plan), deleteTaskCmd ]
+                    , Cmd.batch [ Ports.savePlan (Plan.encodePlan plan), deleteTaskCmd ]
                     )
 
                 Nothing ->
@@ -750,7 +566,7 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    dataLoaded DataLoadedRaw
+    Ports.dataLoaded DataLoadedRaw
 
 
 -- VIEW
@@ -821,399 +637,4 @@ viewFooter =
     footer [ class "bg-slate-100 border-t border-slate-200 py-6 mt-12 text-center text-slate-500 text-sm" ]
         [ p [] [ text "Angenda © 2025 - Gerenciamento Inteligente de Tarefas" ]
         , p [ class "mt-1 text-xs" ] [ text "Desenvolvido em Elm, Tailwind CSS e IndexedDB" ]
-        ]
-
-
--- TAREFAS PAGE
-
-viewTarefas : Model -> Html Msg
-viewTarefas model =
-    div [ class "space-y-6" ]
-        [ -- Title & Description
-          div [ class "flex flex-col md:flex-row md:items-center justify-between gap-4" ]
-            [ div []
-                [ h2 [ class "text-2xl font-bold text-slate-800" ] [ text "Minhas Tarefas" ]
-                , p [ class "text-slate-600 text-sm mt-1" ] [ text "Veja e gerencie todas as tarefas, incluindo as vindas de rotinas e planos." ]
-                ]
-            ]
-        , -- Add Task Form
-          Html.form [ onSubmit CreateTask, class "bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-3" ]
-            [ input
-                [ type_ "text"
-                , id "new-task-title"
-                , placeholder "Adicionar nova tarefa avulsa..."
-                , value model.taskTitleInput
-                , onInput InputTaskTitle
-                , class "flex-1 border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 text-slate-800"
-                ]
-                []
-            , button
-                [ type_ "submit"
-                , class "bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2 rounded-lg transition-colors shadow-sm w-full sm:w-auto"
-                ]
-                [ text "Adicionar" ]
-            ]
-        , -- Tasks List
-          div [ class "bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden" ]
-            [ if List.isEmpty model.tasks then
-                div [ class "p-12 text-center space-y-3" ]
-                    [ span [ class "material-symbols-outlined text-slate-300 text-5xl block mx-auto" ] [ text "task_alt" ]
-                    , h3 [ class "text-lg font-medium text-slate-700" ] [ text "Nenhuma tarefa encontrada" ]
-                    , p [ class "text-slate-500 text-sm max-w-md mx-auto" ] [ text "Crie tarefas avulsas no formulário acima ou gere tarefas a partir de suas rotinas ou planos!" ]
-                    ]
-
-              else
-                ul [ class "divide-y divide-slate-100" ]
-                    (List.map viewTaskItem model.tasks)
-            ]
-        ]
-
-viewTaskItem : Task -> Html Msg
-viewTaskItem task =
-    li [ class <| "p-4 flex items-center justify-between gap-4 hover:bg-slate-50 transition-colors " ++ if task.completed then "opacity-75" else "" ]
-        [ div [ class "flex items-start gap-3 flex-1" ]
-            [ button
-                [ type_ "button"
-                , onClick (ToggleTask task.id)
-                , class <|
-                    "mt-0.5 w-6 h-6 rounded-full border flex items-center justify-center transition-all "
-                        ++ (if task.completed then
-                                "bg-amber-500 border-amber-500 text-white"
-
-                            else
-                                "border-slate-300 text-transparent hover:border-red-500"
-                           )
-                ]
-                [ span [ class "material-symbols-outlined", style "font-size" "14px", style "font-weight" "bold" ] [ text "check" ] ]
-            , div [ class "space-y-1" ]
-                [ p
-                    [ class <|
-                        "font-medium "
-                            ++ (if task.completed then
-                                    "line-through text-slate-400"
-
-                                else
-                                    "text-slate-800"
-                               )
-                    ]
-                    [ text task.title ]
-                , div [ class "flex flex-wrap items-center gap-2" ]
-                    [ -- Badge
-                      viewOriginBadge task.origin
-                    ]
-                ]
-            ]
-        , button
-            [ type_ "button"
-            , onClick (DeleteTaskAction task.id)
-            , class "text-slate-400 hover:text-rose-600 p-2 rounded-lg hover:bg-rose-50 transition-all flex items-center justify-center"
-            , title "Excluir Tarefa"
-            ]
-            [ span [ class "material-symbols-outlined", style "font-size" "20px" ] [ text "delete" ] ]
-        ]
-
-viewOriginBadge : String -> Html Msg
-viewOriginBadge origin =
-    if origin == "avulsa" then
-        span [ class "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-semibold bg-slate-100 text-slate-600" ]
-            [ span [ class "material-symbols-outlined", style "font-size" "12px" ] [ text "push_pin" ]
-            , text "Avulsa"
-            ]
-
-    else if String.startsWith "rotina:" origin then
-        let
-            routineTitle =
-                String.dropLeft (String.length "rotina:") origin
-        in
-        span [ class "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-semibold bg-red-50 text-red-700 border border-red-100" ]
-            [ span [ class "material-symbols-outlined", style "font-size" "12px" ] [ text "repeat" ]
-            , text <| "Rotina: " ++ routineTitle
-            ]
-
-    else if String.startsWith "plano:" origin then
-        -- Format "plano:planId:planTaskId" -> we can just display "Plano"
-        span [ class "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-100" ]
-            [ span [ class "material-symbols-outlined", style "font-size" "12px" ] [ text "schema" ]
-            , text "Plano"
-            ]
-
-    else
-        span [ class "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-semibold bg-slate-100 text-slate-600" ]
-            [ text origin ]
-
-
--- ROTINAS PAGE
-
-viewRotinas : Model -> Html Msg
-viewRotinas model =
-    div [ class "space-y-6" ]
-        [ div []
-            [ h2 [ class "text-2xl font-bold text-slate-800" ] [ text "Minhas Rotinas" ]
-            , p [ class "text-slate-600 text-sm mt-1" ] [ text "Defina tarefas recorrentes e crie instâncias delas na lista principal com um clique." ]
-            ]
-        , -- Add Routine Form
-          Html.form [ onSubmit CreateRoutine, class "bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4" ]
-            [ h3 [ class "font-semibold text-slate-700 text-sm" ] [ text "Nova Rotina" ]
-            , div [ class "grid grid-cols-1 md:grid-cols-3 gap-4" ]
-                [ div [ class "md:col-span-2" ]
-                    [ label [ for "new-routine-title", class "sr-only" ] [ text "Nome da Rotina" ]
-                    , input
-                        [ type_ "text"
-                        , id "new-routine-title"
-                        , placeholder "Ex: Beber 2L de água, Fazer academia..."
-                        , value model.routineTitleInput
-                        , onInput InputRoutineTitle
-                        , class "w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 text-slate-800"
-                        ]
-                        []
-                    ]
-                , div []
-                    [ label [ for "new-routine-recurrence", class "sr-only" ] [ text "Recorrência" ]
-                    , select
-                        [ id "new-routine-recurrence"
-                        , value model.routineRecurrenceInput
-                        , onInput InputRoutineRecurrence
-                        , class "w-full border border-slate-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 text-slate-800"
-                        ]
-                        [ option [ value "Diária" ] [ text "Diária" ]
-                        , option [ value "Semanal" ] [ text "Semanal" ]
-                        , option [ value "Mensal" ] [ text "Mensal" ]
-                        ]
-                    ]
-                ]
-            , div [ class "flex justify-end" ]
-                [ button
-                    [ type_ "submit"
-                    , class "bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2 rounded-lg transition-colors shadow-sm"
-                    ]
-                    [ text "Criar Rotina" ]
-                ]
-            ]
-        , -- Routines List
-          div [ class "grid grid-cols-1 md:grid-cols-2 gap-4" ]
-            [ if List.isEmpty model.routines then
-                div [ class "col-span-full bg-white p-12 text-center space-y-3 rounded-xl border border-slate-200 shadow-sm" ]
-                    [ span [ class "material-symbols-outlined text-slate-300 text-5xl block mx-auto" ] [ text "autorenew" ]
-                    , h3 [ class "text-lg font-medium text-slate-700" ] [ text "Nenhuma rotina configurada" ]
-                    , p [ class "text-slate-500 text-sm max-w-md mx-auto" ] [ text "Adicione rotinas para tarefas diárias, semanais ou mensais usando o formulário acima!" ]
-                    ]
-
-              else
-                div [ class "col-span-full grid grid-cols-1 md:grid-cols-2 gap-4" ]
-                    (List.map viewRoutineItem model.routines)
-            ]
-        ]
-
-viewRoutineItem : Routine -> Html Msg
-viewRoutineItem routine =
-    div [ class "bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between gap-4 hover:shadow-md transition-shadow" ]
-        [ div [ class "space-y-2" ]
-            [ div [ class "flex items-start justify-between gap-4" ]
-                [ h4 [ class "font-bold text-lg text-slate-800" ] [ text routine.title ]
-                , button
-                    [ type_ "button"
-                    , onClick (DeleteRoutineAction routine.id)
-                    , class "text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-all flex items-center justify-center"
-                    , title "Excluir Rotina"
-                    ]
-                    [ span [ class "material-symbols-outlined", style "font-size" "18px" ] [ text "delete" ] ]
-                ]
-            , div [ class "flex items-center gap-1.5" ]
-                [ span [ class "material-symbols-outlined text-red-500", style "font-size" "18px" ] [ text "repeat" ]
-                , span [ class "text-xs font-semibold text-red-600 uppercase tracking-wider" ] [ text routine.recurrence ]
-                ]
-            ]
-        , button
-            [ type_ "button"
-            , onClick (GenerateTaskFromRoutine routine)
-            , class "w-full bg-slate-50 hover:bg-red-50 border border-slate-200 hover:border-red-200 text-red-600 hover:text-red-700 font-semibold py-2 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
-            ]
-            [ span [ class "material-symbols-outlined", style "font-size" "18px" ] [ text "add" ]
-            , text "Gerar Tarefa"
-            ]
-        ]
-
-
--- PLANOS PAGE
-
-viewPlanos : Model -> Html Msg
-viewPlanos model =
-    div [ class "space-y-6" ]
-        [ div []
-            [ h2 [ class "text-2xl font-bold text-slate-800" ] [ text "Meus Planos" ]
-            , p [ class "text-slate-600 text-sm mt-1" ] [ text "Crie sequências de tarefas estruturadas para alcançar um objetivo maior." ]
-            ]
-        , -- Add Plan Form
-          Html.form [ onSubmit CreatePlan, class "bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4" ]
-            [ h3 [ class "font-semibold text-slate-700 text-sm" ] [ text "Novo Plano (Projeto)" ]
-            , div [ class "grid grid-cols-1 gap-4" ]
-                [ div []
-                    [ label [ for "new-plan-title", class "sr-only" ] [ text "Título do Plano" ]
-                    , input
-                        [ type_ "text"
-                        , id "new-plan-title"
-                        , placeholder "Ex: Aprender Alemão, Organizar Viagem de Férias..."
-                        , value model.planTitleInput
-                        , onInput InputPlanTitle
-                        , class "w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 text-slate-800"
-                        ]
-                        []
-                    ]
-                , div []
-                    [ label [ for "new-plan-desc", class "sr-only" ] [ text "Descrição" ]
-                    , textarea
-                        [ id "new-plan-desc"
-                        , placeholder "Descreva o objetivo do plano..."
-                        , value model.planDescInput
-                        , onInput InputPlanDesc
-                        , class "w-full border border-slate-300 rounded-lg px-4 py-2 h-20 focus:outline-none focus:ring-2 focus:ring-red-500 text-slate-800"
-                        ]
-                        []
-                    ]
-                ]
-            , div [ class "flex justify-end" ]
-                [ button
-                    [ type_ "submit"
-                    , class "bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2 rounded-lg transition-colors shadow-sm"
-                    ]
-                    [ text "Criar Plano" ]
-                ]
-            ]
-        , -- Plans List & Editor
-          div [ class "space-y-4" ]
-            [ if List.isEmpty model.plans then
-                div [ class "bg-white p-12 text-center space-y-3 rounded-xl border border-slate-200 shadow-sm" ]
-                    [ span [ class "material-symbols-outlined text-slate-300 text-5xl block mx-auto" ] [ text "schema" ]
-                    , h3 [ class "text-lg font-medium text-slate-700" ] [ text "Nenhum plano cadastrado" ]
-                    , p [ class "text-slate-500 text-sm max-w-md mx-auto" ] [ text "Comece criando um plano no formulário acima para estruturar sua jornada!" ]
-                    ]
-
-              else
-                div [ class "space-y-4" ]
-                    (List.map (viewPlanItem model) model.plans)
-            ]
-        ]
-
-viewPlanItem : Model -> Plan -> Html Msg
-viewPlanItem model plan =
-    let
-        isEditing =
-            model.editingPlanId == Just plan.id
-
-        totalTasks =
-            List.length plan.tasks
-
-        completedTasks =
-            List.filter .completed plan.tasks |> List.length
-
-        progressPercent =
-            if totalTasks == 0 then
-                0
-
-            else
-                round ((toFloat completedTasks / toFloat totalTasks) * 100)
-    in
-    div [ class "bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow" ]
-        [ div [ class "p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/50" ]
-            [ div [ class "space-y-1 flex-1" ]
-                [ h4 [ class "font-bold text-lg text-slate-800" ] [ text plan.title ]
-                , p [ class "text-slate-500 text-sm" ] [ text plan.description ]
-                , if totalTasks > 0 then
-                    div [ class "flex items-center gap-3 mt-2" ]
-                        [ div [ class "w-24 bg-slate-200 rounded-full h-2 overflow-hidden" ]
-                            [ div [ class "bg-amber-500 h-full rounded-full transition-all duration-300", style "width" (String.fromInt progressPercent ++ "%") ] [] ]
-                        , span [ class "text-xs font-semibold text-slate-600" ] [ text (String.fromInt completedTasks ++ "/" ++ String.fromInt totalTasks ++ " concluídas (" ++ String.fromInt progressPercent ++ "%)") ]
-                        ]
-
-                  else
-                    p [ class "text-xs text-slate-400 italic mt-1" ] [ text "Nenhuma tarefa adicionada a este plano." ]
-                ]
-            , div [ class "flex items-center gap-2 self-start sm:self-center" ]
-                [ button
-                    [ type_ "button"
-                    , id <| "gerenciar-plano-" ++ plan.id
-                    , onClick (if isEditing then StopEditPlan else StartEditPlan plan.id)
-                    , class <|
-                        "font-semibold text-sm px-4 py-2 rounded-lg border transition-colors "
-                            ++ (if isEditing then
-                                    "bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
-
-                                else
-                                    "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                               )
-                    ]
-                    [ text (if isEditing then "Fechar" else "Gerenciar Tarefas") ]
-                , button
-                    [ type_ "button"
-                    , onClick (DeletePlanAction plan.id)
-                    , class "text-slate-400 hover:text-rose-600 p-2 rounded-lg hover:bg-rose-50 transition-all flex items-center justify-center"
-                    , title "Excluir Plano"
-                    ]
-                    [ span [ class "material-symbols-outlined", style "font-size" "20px" ] [ text "delete" ] ]
-                ]
-            ]
-        , if isEditing then
-            div [ class "p-5 bg-white space-y-4 border-t border-slate-100" ]
-                [ h5 [ class "font-semibold text-slate-700 text-sm" ] [ text "Sequência de Tarefas do Plano" ]
-                , -- Form to add sequential tasks
-                  Html.form
-                    [ onSubmit (AddPlanTask plan.id)
-                    , class "flex gap-2"
-                    ]
-                    [ input
-                        [ type_ "text"
-                        , id "new-plan-task"
-                        , placeholder "Insira o próximo passo do plano..."
-                        , value model.newPlanTaskTitle
-                        , onInput InputPlanTaskTitle
-                        , class "flex-1 border border-slate-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm text-slate-800"
-                        ]
-                        []
-                    , button
-                        [ type_ "submit"
-                        , id "add-plan-task-btn"
-                        , class "bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-1.5 rounded-lg text-sm transition-colors"
-                        ]
-                        [ text "Adicionar" ]
-                    ]
-                , -- List of current plan tasks
-                  if List.isEmpty plan.tasks then
-                    p [ class "text-sm text-slate-400 italic text-center py-4" ] [ text "Sem tarefas adicionadas a este plano. Adicione tarefas para iniciar a sequência!" ]
-
-                  else
-                    ol [ class "divide-y divide-slate-100 border border-slate-100 rounded-lg overflow-hidden bg-slate-50/20" ]
-                        (List.indexedMap (viewPlanTaskItem plan.id) plan.tasks)
-                ]
-
-          else
-            text ""
-        ]
-
-viewPlanTaskItem : String -> Int -> PlanTask -> Html Msg
-viewPlanTaskItem planId index pt =
-    li [ class <| "p-3 flex items-center justify-between gap-3 text-sm " ++ if pt.completed then "opacity-70 bg-amber-50/10" else "" ]
-        [ div [ class "flex items-center gap-2" ]
-            [ button
-                [ type_ "button"
-                , onClick (TogglePlanTask planId pt.id)
-                , class <|
-                    "w-5 h-5 rounded-full border flex items-center justify-center transition-all "
-                        ++ (if pt.completed then
-                                "bg-amber-500 border-amber-500 text-white"
-
-                            else
-                                "border-slate-300 text-transparent hover:border-red-500"
-                           )
-                ]
-                [ span [ class "material-symbols-outlined", style "font-size" "12px", style "font-weight" "bold" ] [ text "check" ] ]
-            , span [ class "font-semibold text-slate-400" ] [ text (String.fromInt (index + 1) ++ ".") ]
-            , span [ class <| "font-medium " ++ if pt.completed then "line-through text-slate-400" else "text-slate-700" ] [ text pt.title ]
-            ]
-        , button
-            [ type_ "button"
-            , onClick (DeletePlanTask planId pt.id)
-            , class "text-slate-400 hover:text-rose-600 p-1 rounded-lg hover:bg-rose-50 transition-all flex items-center justify-center"
-            , title "Excluir Passo"
-            ]
-            [ span [ class "material-symbols-outlined", style "font-size" "18px" ] [ text "delete" ] ]
         ]
