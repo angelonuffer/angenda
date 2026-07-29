@@ -8,6 +8,7 @@ type Route
     = Tarefas
     | Rotinas
     | Planos
+    | AdicionarTarefa
 
 
 routeParser : Parser (Route -> a) a
@@ -15,6 +16,7 @@ routeParser =
     Parser.oneOf
         [ Parser.map Tarefas top
         , Parser.map Tarefas (Parser.s "tarefas")
+        , Parser.map AdicionarTarefa (Parser.s "tarefas" </> Parser.s "nova")
         , Parser.map Rotinas (Parser.s "rotinas")
         , Parser.map Planos (Parser.s "planos")
         ]

@@ -16,12 +16,17 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
   // Step 1: Navigate to Tasks, populate some tasks first so screenshots look nice
   console.log('Navigating to /tarefas to pre-populate tasks...');
   await page.goto('/tarefas');
-  await page.waitForSelector('#new-task-title', { timeout: 10000 });
+  await page.waitForSelector('a:has-text("Nova Tarefa")', { timeout: 10000 });
 
+  await page.click('a:has-text("Nova Tarefa")');
+  await page.waitForSelector('#new-task-title', { timeout: 10000 });
   await page.fill('#new-task-title', 'Comprar mantimentos para a semana');
   await page.click('button[type="submit"]');
   await page.waitForTimeout(200);
 
+  await page.waitForSelector('a:has-text("Nova Tarefa")', { timeout: 10000 });
+  await page.click('a:has-text("Nova Tarefa")');
+  await page.waitForSelector('#new-task-title', { timeout: 10000 });
   await page.fill('#new-task-title', 'Revisar relatório de desempenho');
   await page.click('button[type="submit"]');
   await page.waitForTimeout(200);
@@ -80,7 +85,7 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
   await page.waitForTimeout(200);
 
   // Now take the screenshots for each route and layout!
-  const routes = ['tarefas', 'rotinas', 'planos'];
+  const routes = ['tarefas', 'tarefas/nova', 'rotinas', 'planos'];
 
   for (const route of routes) {
     console.log(`Taking screenshots for /${route}...`);
