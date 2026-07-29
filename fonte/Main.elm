@@ -66,15 +66,45 @@ update msg model =
                     ( model, Nav.load href )
 
         UrlChanged url ->
-            ( { model | route = Route.fromUrl url }, Cmd.none )
+            let
+                newRoute =
+                    Route.fromUrl url
+
+                newTitleInput =
+                    case newRoute of
+                        Route.EditarTarefa id ->
+                            model.tasks
+                                |> List.filter (\t -> t.id == id)
+                                |> List.head
+                                |> Maybe.map .title
+                                |> Maybe.withDefault ""
+
+                        _ ->
+                            ""
+            in
+            ( { model | route = newRoute, taskTitleInput = newTitleInput }, Cmd.none )
 
         DataLoadedRaw rawValue ->
             case Decode.decodeValue Types.loadedDataDecoder rawValue of
                 Ok payload ->
+                    let
+                        newTitleInput =
+                            case model.route of
+                                Route.EditarTarefa id ->
+                                    payload.tasks
+                                        |> List.filter (\t -> t.id == id)
+                                        |> List.head
+                                        |> Maybe.map .title
+                                        |> Maybe.withDefault model.taskTitleInput
+
+                                _ ->
+                                    model.taskTitleInput
+                    in
                     ( { model
                         | tasks = payload.tasks
                         , routines = payload.routines
                         , plans = payload.plans
+                        , taskTitleInput = newTitleInput
                       }
                     , Cmd.none
                     )
@@ -125,6 +155,89 @@ update msg model =
                     , Nav.pushUrl model.key "/tarefas"
                     ]
                 )
+
+        SaveEditedTask id ->
+            let
+                trimmedTitle =
+                    String.trim model.taskTitleInput
+            in
+            if trimmedTitle == "" then
+                ( model, Cmd.none )
+
+            else
+                let
+                    maybeTask =
+                        List.filter (\t -> t.id == id) model.tasks |> List.head
+                in
+                case maybeTask of
+                    Just task ->
+                        let
+                            updatedTask =
+                                { task | title = trimmedTitle }
+
+                            updatedTasks =
+                                List.map
+                                    (\t ->
+                                        if t.id == id then
+                                            updatedTask
+
+                                        else
+                                            t
+                                    )
+                                    model.tasks
+
+                            parts =
+                                String.split ":" task.origin
+
+                            ( updatedPlans, planSyncCmd ) =
+                                case parts of
+                                    [ "plano", planId, planTaskId ] ->
+                                        let
+                                            newPlans =
+                                                List.map
+                                                    (\p ->
+                                                        if p.id == planId then
+                                                            { p
+                                                                | tasks =
+                                                                    List.map
+                                                                        (\pt ->
+                                                                            if pt.id == planTaskId then
+                                                                                { pt | title = trimmedTitle }
+
+                                                                            else
+                                                                                pt
+                                                                        )
+                                                                        p.tasks
+                                                            }
+
+                                                        else
+                                                            p
+                                                    )
+                                                    model.plans
+
+                                            maybePlan =
+                                                List.filter (\p -> p.id == planId) newPlans |> List.head
+                                        in
+                                        case maybePlan of
+                                            Just plan ->
+                                                ( newPlans, Ports.savePlan (Plan.encodePlan plan) )
+
+                                            Nothing ->
+                                                ( model.plans, Cmd.none )
+
+                                    _ ->
+                                        ( model.plans, Cmd.none )
+                        in
+                        ( { model | tasks = updatedTasks, plans = updatedPlans, taskTitleInput = "" }
+                        , Cmd.batch
+                            [ Ports.saveTask (Task.encodeTask updatedTask)
+                            , planSyncCmd
+                            , Nav.pushUrl model.key "/tarefas"
+                            ]
+                        )
+
+                    Nothing ->
+                        ( model, Cmd.none )
 
         ToggleTask id ->
             let
@@ -589,6 +702,9 @@ view model =
                     AdicionarTarefa ->
                         viewNovaTarefa model
 
+                    Route.EditarTarefa _ ->
+                        viewNovaTarefa model
+
                     Rotinas ->
                         viewRotinas model
 
@@ -612,7 +728,20 @@ viewHeader currentRoute =
                 , h1 [ class "text-2xl font-bold tracking-tight" ] [ text "Angenda" ]
                 ]
             , nav [ class "flex items-center gap-1 bg-red-800/50 rounded-lg p-1" ]
-                [ viewNavLink "/tarefas" "playlist_add_check" "Tarefas" (currentRoute == Tarefas || currentRoute == AdicionarTarefa)
+                [ viewNavLink "/tarefas" "playlist_add_check" "Tarefas"
+                    (case currentRoute of
+                        Tarefas ->
+                            True
+
+                        AdicionarTarefa ->
+                            True
+
+                        Route.EditarTarefa _ ->
+                            True
+
+                        _ ->
+                            False
+                    )
                 , viewNavLink "/rotinas" "repeat" "Rotinas" (currentRoute == Rotinas)
                 , viewNavLink "/planos" "schema" "Planos" (currentRoute == Planos)
                 ]

@@ -75,13 +75,21 @@ viewTaskItem task =
                     ]
                 ]
             ]
-        , button
-            [ type_ "button"
-            , onClick (DeleteTaskAction task.id)
-            , class "text-slate-400 hover:text-rose-600 p-2 rounded-lg hover:bg-rose-50 transition-all flex items-center justify-center"
-            , title "Excluir Tarefa"
+        , div [ class "flex items-center gap-1" ]
+            [ a
+                [ href <| "/tarefas/editar/" ++ task.id
+                , class "text-slate-400 hover:text-amber-600 p-2 rounded-lg hover:bg-amber-50 transition-all flex items-center justify-center no-underline cursor-pointer"
+                , title "Editar Tarefa"
+                ]
+                [ span [ class "material-symbols-outlined", style "font-size" "20px" ] [ text "edit" ] ]
+            , button
+                [ type_ "button"
+                , onClick (DeleteTaskAction task.id)
+                , class "text-slate-400 hover:text-rose-600 p-2 rounded-lg hover:bg-rose-50 transition-all flex items-center justify-center"
+                , title "Excluir Tarefa"
+                ]
+                [ span [ class "material-symbols-outlined", style "font-size" "20px" ] [ text "delete" ] ]
             ]
-            [ span [ class "material-symbols-outlined", style "font-size" "20px" ] [ text "delete" ] ]
         ]
 
 
