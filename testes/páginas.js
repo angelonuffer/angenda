@@ -84,15 +84,36 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
   await page.click('button:has-text("Fechar")');
   await page.waitForTimeout(200);
 
+  // Step 4: Edit a task
+  console.log('Editing the first task...');
+  await page.goto('/tarefas');
+  await page.waitForSelector('a[title="Editar Tarefa"]', { timeout: 10000 });
+  await page.click('a[title="Editar Tarefa"]');
+  await page.waitForSelector('#new-task-title', { timeout: 10000 });
+  await page.fill('#new-task-title', 'Comprar mantimentos para a semana inteira');
+  await page.click('button[type="submit"]');
+  await page.waitForTimeout(500);
+
   // Now take the screenshots for each route and layout!
-  const routes = ['tarefas', 'tarefas/nova', 'rotinas', 'planos'];
+  const routes = [
+    'tarefas',
+    'tarefas/nova',
+    'tarefas/editar/task_0_Comprar_mantimentos_para_a_semana',
+    'rotinas',
+    'planos'
+  ];
 
   for (const route of routes) {
     console.log(`Taking screenshots for /${route}...`);
     await page.goto(`/${route}`);
     await page.waitForTimeout(500); // Wait for Elm view transition
 
-    const dir = path.join(__dirname, 'páginas', route);
+    let saveRoute = route;
+    if (route.startsWith('tarefas/editar/')) {
+      saveRoute = 'tarefas/editar';
+    }
+
+    const dir = path.join(__dirname, 'páginas', saveRoute);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }

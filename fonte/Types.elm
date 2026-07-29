@@ -40,6 +40,7 @@ type Msg
     | InputPlanTaskTitle String
     -- Actions
     | CreateTask
+    | SaveEditedTask String
     | ToggleTask String
     | DeleteTaskAction String
     | CreateRoutine

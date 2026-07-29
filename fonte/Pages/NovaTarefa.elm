@@ -3,20 +3,38 @@ module Pages.NovaTarefa exposing (viewNovaTarefa)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
+import Route exposing (Route(..))
 import Types exposing (Model, Msg(..))
 
 
 viewNovaTarefa : Model -> Html Msg
 viewNovaTarefa model =
+    let
+        config =
+            case model.route of
+                Route.EditarTarefa id ->
+                    { pageTitle = "Editar Tarefa"
+                    , pageDesc = "Edite os detalhes de sua tarefa."
+                    , submitMsg = SaveEditedTask id
+                    , buttonText = "Salvar"
+                    }
+
+                _ ->
+                    { pageTitle = "Nova Tarefa"
+                    , pageDesc = "Crie uma nova tarefa avulsa para sua lista de tarefas."
+                    , submitMsg = CreateTask
+                    , buttonText = "Adicionar"
+                    }
+    in
     div [ class "space-y-6 max-w-xl mx-auto" ]
         [ -- Title & Description
           div []
-            [ h2 [ class "text-2xl font-bold text-slate-800" ] [ text "Nova Tarefa" ]
-            , p [ class "text-slate-600 text-sm mt-1" ] [ text "Crie uma nova tarefa avulsa para sua lista de tarefas." ]
+            [ h2 [ class "text-2xl font-bold text-slate-800" ] [ text config.pageTitle ]
+            , p [ class "text-slate-600 text-sm mt-1" ] [ text config.pageDesc ]
             ]
         , -- Add Task Form Card
           div [ class "bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4" ]
-            [ Html.form [ onSubmit CreateTask, class "space-y-4" ]
+            [ Html.form [ onSubmit config.submitMsg, class "space-y-4" ]
                 [ div []
                     [ label [ for "new-task-title", class "block text-sm font-semibold text-slate-700 mb-1" ] [ text "Título da Tarefa" ]
                     , input
@@ -40,7 +58,7 @@ viewNovaTarefa model =
                         [ type_ "submit"
                         , class "bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2 rounded-lg transition-colors shadow-sm text-sm"
                         ]
-                        [ text "Adicionar" ]
+                        [ text config.buttonText ]
                     ]
                 ]
             ]
