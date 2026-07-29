@@ -837,7 +837,7 @@ viewTarefas model =
                 ]
             ]
         , -- Add Task Form
-          Html.form [ onSubmit CreateTask, class "bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex gap-3" ]
+          Html.form [ onSubmit CreateTask, class "bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-3" ]
             [ input
                 [ type_ "text"
                 , id "new-task-title"
@@ -849,7 +849,7 @@ viewTarefas model =
                 []
             , button
                 [ type_ "submit"
-                , class "bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2 rounded-lg transition-colors shadow-sm"
+                , class "bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2 rounded-lg transition-colors shadow-sm w-full sm:w-auto"
                 ]
                 [ text "Adicionar" ]
             ]
