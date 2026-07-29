@@ -87,7 +87,7 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
     await page.goto(`/${route}`);
     await page.waitForTimeout(500); // Wait for Elm view transition
 
-    const dir = path.join(__dirname, 'telas', route);
+    const dir = path.join(__dirname, 'páginas', route);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
