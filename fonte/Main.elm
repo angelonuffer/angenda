@@ -9,6 +9,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Json.Decode as Decode
+import Pages.NovaTarefa exposing (viewNovaTarefa)
 import Pages.Planos exposing (viewPlanos)
 import Pages.Rotinas exposing (viewRotinas)
 import Pages.Tarefas exposing (viewTarefas)
@@ -119,7 +120,10 @@ update msg model =
                         }
                 in
                 ( { model | tasks = model.tasks ++ [ newTask ], taskTitleInput = "" }
-                , Ports.saveTask (Task.encodeTask newTask)
+                , Cmd.batch
+                    [ Ports.saveTask (Task.encodeTask newTask)
+                    , Nav.pushUrl model.key "/tarefas"
+                    ]
                 )
 
         ToggleTask id ->
@@ -582,6 +586,9 @@ view model =
                     Tarefas ->
                         viewTarefas model
 
+                    AdicionarTarefa ->
+                        viewNovaTarefa model
+
                     Rotinas ->
                         viewRotinas model
 
@@ -605,7 +612,7 @@ viewHeader currentRoute =
                 , h1 [ class "text-2xl font-bold tracking-tight" ] [ text "Angenda" ]
                 ]
             , nav [ class "flex items-center gap-1 bg-red-800/50 rounded-lg p-1" ]
-                [ viewNavLink "/tarefas" "playlist_add_check" "Tarefas" (currentRoute == Tarefas)
+                [ viewNavLink "/tarefas" "playlist_add_check" "Tarefas" (currentRoute == Tarefas || currentRoute == AdicionarTarefa)
                 , viewNavLink "/rotinas" "repeat" "Rotinas" (currentRoute == Rotinas)
                 , viewNavLink "/planos" "schema" "Planos" (currentRoute == Planos)
                 ]

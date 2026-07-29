@@ -11,28 +11,18 @@ viewTarefas : Model -> Html Msg
 viewTarefas model =
     div [ class "space-y-6" ]
         [ -- Title & Description
-          div [ class "flex flex-col md:flex-row md:items-center justify-between gap-4" ]
+          div [ class "flex flex-col sm:flex-row sm:items-center justify-between gap-4" ]
             [ div []
                 [ h2 [ class "text-2xl font-bold text-slate-800" ] [ text "Minhas Tarefas" ]
                 , p [ class "text-slate-600 text-sm mt-1" ] [ text "Veja e gerencie todas as tarefas, incluindo as vindas de rotinas e planos." ]
                 ]
-            ]
-        , -- Add Task Form
-          Html.form [ onSubmit CreateTask, class "bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-3" ]
-            [ input
-                [ type_ "text"
-                , id "new-task-title"
-                , placeholder "Adicionar nova tarefa avulsa..."
-                , value model.taskTitleInput
-                , onInput InputTaskTitle
-                , class "flex-1 border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 text-slate-800"
+            , a
+                [ href "/tarefas/nova"
+                , class "bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2.5 rounded-lg transition-colors shadow-sm text-sm flex items-center justify-center gap-2 cursor-pointer no-underline self-start sm:self-auto"
                 ]
-                []
-            , button
-                [ type_ "submit"
-                , class "bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2 rounded-lg transition-colors shadow-sm w-full sm:w-auto"
+                [ span [ class "material-symbols-outlined", style "font-size" "18px" ] [ text "add" ]
+                , text "Nova Tarefa"
                 ]
-                [ text "Adicionar" ]
             ]
         , -- Tasks List
           div [ class "bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden" ]
@@ -40,7 +30,7 @@ viewTarefas model =
                 div [ class "p-12 text-center space-y-3" ]
                     [ span [ class "material-symbols-outlined text-slate-300 text-5xl block mx-auto" ] [ text "task_alt" ]
                     , h3 [ class "text-lg font-medium text-slate-700" ] [ text "Nenhuma tarefa encontrada" ]
-                    , p [ class "text-slate-500 text-sm max-w-md mx-auto" ] [ text "Crie tarefas avulsas no formulário acima ou gere tarefas a partir de suas rotinas ou planos!" ]
+                    , p [ class "text-slate-500 text-sm max-w-md mx-auto" ] [ text "Crie tarefas avulsas no botão acima ou gere tarefas a partir de suas rotinas ou planos!" ]
                     ]
 
               else
