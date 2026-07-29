@@ -10,6 +10,7 @@ type alias Task =
     , completed : Bool
     , origin : String -- e.g. "avulsa", "rotina:id:title", "plano:id:taskId:title"
     , createdAt : String
+    , history : List String
     }
 
 
@@ -21,14 +22,16 @@ encodeTask task =
         , ( "completed", Encode.bool task.completed )
         , ( "origin", Encode.string task.origin )
         , ( "createdAt", Encode.string task.createdAt )
+        , ( "history", Encode.list Encode.string task.history )
         ]
 
 
 taskDecoder : Decoder Task
 taskDecoder =
-    Decode.map5 Task
-        (Decode.field "id" Decode.string)
-        (Decode.field "title" Decode.string)
-        (Decode.field "completed" Decode.bool)
-        (Decode.field "origin" Decode.string)
-        (Decode.field "createdAt" Decode.string)
+    Decode.succeed Task
+        |> Decode.andThen (\f -> Decode.map f (Decode.field "id" Decode.string))
+        |> Decode.andThen (\f -> Decode.map f (Decode.field "title" Decode.string))
+        |> Decode.andThen (\f -> Decode.map f (Decode.field "completed" Decode.bool))
+        |> Decode.andThen (\f -> Decode.map f (Decode.field "origin" Decode.string))
+        |> Decode.andThen (\f -> Decode.map f (Decode.field "createdAt" Decode.string))
+        |> Decode.andThen (\f -> Decode.map f (Decode.oneOf [ Decode.field "history" (Decode.list Decode.string), Decode.succeed [] ]))
