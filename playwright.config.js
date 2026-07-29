@@ -22,7 +22,7 @@ module.exports = defineConfig({
     },
   ],
   webServer: {
-    command: 'node testes/server.js',
+    command: 'npx serve -s alvo -l 3000',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     stdout: 'pipe',

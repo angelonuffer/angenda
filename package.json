@@ -1,13 +1,10 @@
 {
   "name": "angenda",
   "version": "1.0.0",
-  "description": "Angenda - Gerenciador de Tarefas em Elm, Tailwind CSS e IndexedDB",
-  "main": "build.js",
+  "description": "Angenda - Gerenciador de Tarefas",
   "scripts": {
-    "build": "node build.js",
-    "test": "npx playwright install chromium --with-deps && npx playwright test",
-    "format": "echo 'No formatting required'",
-    "lint": "echo 'No linting required'"
+    "build": "mkdir -p alvo && elm make fonte/Main.elm --output=alvo/elm.js && cp fonte/index.html alvo/index.html && cp fonte/brand-icon.png alvo/brand-icon.png && cp fonte/app.js alvo/app.js",
+    "test": "npm run build && npx playwright install chromium --with-deps && npx playwright test"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.0",
@@ -23,7 +20,5 @@
     "spa",
     "indexeddb",
     "tasks"
-  ],
-  "author": "",
-  "license": "ISC"
+  ]
 }
