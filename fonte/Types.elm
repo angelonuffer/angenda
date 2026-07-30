@@ -25,6 +25,7 @@ type alias Model =
     , planDescInput : String
     , editingPlanId : Maybe String
     , newPlanTaskTitle : String
+    , today : String
     }
 
 

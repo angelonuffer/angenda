@@ -141,10 +141,17 @@
                 console.error('Could not initialize database. Port sync will run with fallback storage.');
             }
 
-            // Initialize Elm application
+            // Initialize Elm application with local today date as a flag
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const todayStr = `${year}-${month}-${day}`;
+
             // Browser.application needs a flags argument, and returns { ports } if they are declared in Main.elm
             const app = Elm.Main.init({
-                node: document.getElementById('elm-app')
+                node: document.getElementById('elm-app'),
+                flags: todayStr
             });
 
             // Handle loadData command
