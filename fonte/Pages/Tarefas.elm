@@ -9,6 +9,14 @@ import Types exposing (Model, Msg(..))
 
 viewTarefas : Model -> Html Msg
 viewTarefas model =
+    let
+        filteredTasks =
+            if model.tarefasTab == "arquivadas" then
+                List.filter .archived model.tasks
+
+            else
+                List.filter (\t -> not t.archived) model.tasks
+    in
     div [ class "space-y-6" ]
         [ -- Title & Description
           div [ class "flex flex-col sm:flex-row sm:items-center justify-between gap-4" ]
@@ -24,24 +32,69 @@ viewTarefas model =
                 , text "Nova Tarefa"
                 ]
             ]
+        , -- Tabs for Active / Archived
+          div [ class "border-b border-slate-200 flex gap-4 text-sm" ]
+            [ button
+                [ type_ "button"
+                , id "tab-ativas"
+                , onClick (SetTarefasTab "ativas")
+                , class <|
+                    "pb-3 font-semibold transition-all border-b-2 px-2 cursor-pointer "
+                        ++ (if model.tarefasTab == "ativas" then
+                                "border-red-600 text-red-600"
+
+                            else
+                                "border-transparent text-slate-500 hover:text-slate-800"
+                           )
+                ]
+                [ text "Ativas" ]
+            , button
+                [ type_ "button"
+                , id "tab-arquivadas"
+                , onClick (SetTarefasTab "arquivadas")
+                , class <|
+                    "pb-3 font-semibold transition-all border-b-2 px-2 cursor-pointer "
+                        ++ (if model.tarefasTab == "arquivadas" then
+                                "border-red-600 text-red-600"
+
+                            else
+                                "border-transparent text-slate-500 hover:text-slate-800"
+                           )
+                ]
+                [ text "Arquivadas" ]
+            ]
         , -- Tasks List
           div [ class "bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden" ]
-            [ if List.isEmpty model.tasks then
+            [ if List.isEmpty filteredTasks then
                 div [ class "p-12 text-center space-y-3" ]
                     [ span [ class "material-symbols-outlined text-slate-300 text-5xl block mx-auto" ] [ text "task_alt" ]
-                    , h3 [ class "text-lg font-medium text-slate-700" ] [ text "Nenhuma tarefa encontrada" ]
-                    , p [ class "text-slate-500 text-sm max-w-md mx-auto" ] [ text "Crie tarefas avulsas no botão acima ou gere tarefas a partir de suas rotinas ou planos!" ]
+                    , h3 [ class "text-lg font-medium text-slate-700" ]
+                        [ text <|
+                            if model.tarefasTab == "arquivadas" then
+                                "Nenhuma tarefa arquivada"
+
+                            else
+                                "Nenhuma tarefa encontrada"
+                        ]
+                    , p [ class "text-slate-500 text-sm max-w-md mx-auto" ]
+                        [ text <|
+                            if model.tarefasTab == "arquivadas" then
+                                "As tarefas que você arquivar aparecerão aqui. Você poderá restaurá-las a qualquer momento!"
+
+                            else
+                                "Crie tarefas avulsas no botão acima ou gere tarefas a partir de suas rotinas ou planos!"
+                        ]
                     ]
 
               else
                 ul [ class "divide-y divide-slate-100" ]
-                    (List.map viewTaskItem model.tasks)
+                    (List.map (viewTaskItem model.tarefasTab) filteredTasks)
             ]
         ]
 
 
-viewTaskItem : Task -> Html Msg
-viewTaskItem task =
+viewTaskItem : String -> Task -> Html Msg
+viewTaskItem currentTab task =
     li [ class <| "p-4 flex items-center justify-between gap-4 hover:bg-slate-50 transition-colors " ++ if task.completed then "opacity-75" else "" ]
         [ div [ class "flex items-start gap-3 flex-1" ]
             [ button
@@ -77,20 +130,39 @@ viewTaskItem task =
                 ]
             ]
         , div [ class "flex items-center gap-1" ]
-            [ a
-                [ href <| "/tarefas/editar/" ++ task.id
-                , class "text-slate-400 hover:text-amber-600 p-2 rounded-lg hover:bg-amber-50 transition-all flex items-center justify-center no-underline cursor-pointer"
-                , title "Editar Tarefa"
+            (if currentTab == "arquivadas" then
+                [ button
+                    [ type_ "button"
+                    , onClick (RestoreTask task.id)
+                    , class "text-slate-400 hover:text-green-600 p-2 rounded-lg hover:bg-green-50 transition-all flex items-center justify-center"
+                    , title "Restaurar Tarefa"
+                    ]
+                    [ span [ class "material-symbols-outlined", style "font-size" "20px" ] [ text "unarchive" ] ]
+                , button
+                    [ type_ "button"
+                    , onClick (DeleteTaskAction task.id)
+                    , class "text-slate-400 hover:text-rose-600 p-2 rounded-lg hover:bg-rose-50 transition-all flex items-center justify-center"
+                    , title "Excluir Permanente"
+                    ]
+                    [ span [ class "material-symbols-outlined", style "font-size" "20px" ] [ text "delete" ] ]
                 ]
-                [ span [ class "material-symbols-outlined", style "font-size" "20px" ] [ text "edit" ] ]
-            , button
-                [ type_ "button"
-                , onClick (DeleteTaskAction task.id)
-                , class "text-slate-400 hover:text-rose-600 p-2 rounded-lg hover:bg-rose-50 transition-all flex items-center justify-center"
-                , title "Excluir Tarefa"
+
+             else
+                [ a
+                    [ href <| "/tarefas/editar/" ++ task.id
+                    , class "text-slate-400 hover:text-amber-600 p-2 rounded-lg hover:bg-amber-50 transition-all flex items-center justify-center no-underline cursor-pointer"
+                    , title "Editar Tarefa"
+                    ]
+                    [ span [ class "material-symbols-outlined", style "font-size" "20px" ] [ text "edit" ] ]
+                , button
+                    [ type_ "button"
+                    , onClick (ArchiveTask task.id)
+                    , class "text-slate-400 hover:text-amber-600 p-2 rounded-lg hover:bg-amber-50 transition-all flex items-center justify-center"
+                    , title "Arquivar Tarefa"
+                    ]
+                    [ span [ class "material-symbols-outlined", style "font-size" "20px" ] [ text "archive" ] ]
                 ]
-                [ span [ class "material-symbols-outlined", style "font-size" "20px" ] [ text "delete" ] ]
-            ]
+            )
         ]
 
 

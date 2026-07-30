@@ -94,6 +94,23 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
   await page.click('button[type="submit"]');
   await page.waitForTimeout(500);
 
+  // Step 5: Archive and Restore a task to verify the new feature works
+  console.log('Archiving a task...');
+  await page.click('button[title="Arquivar Tarefa"]');
+  await page.waitForTimeout(200);
+
+  console.log('Checking archived tab...');
+  await page.click('#tab-arquivadas');
+  await page.waitForTimeout(200);
+
+  console.log('Restoring archived task...');
+  await page.click('button[title="Restaurar Tarefa"]');
+  await page.waitForTimeout(200);
+
+  console.log('Back to active tab...');
+  await page.click('#tab-ativas');
+  await page.waitForTimeout(200);
+
   // Now take the screenshots for each route and layout!
   const routes = [
     'tarefas',

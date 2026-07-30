@@ -40,6 +40,7 @@ init _ url key =
       , tasks = []
       , routines = []
       , plans = []
+      , tarefasTab = "ativas"
       , taskTitleInput = ""
       , routineTitleInput = ""
       , routineRecurrenceInput = "Diária"
@@ -148,6 +149,7 @@ update msg model =
                         , origin = "avulsa"
                         , createdAt = "Agora"
                         , history = []
+                        , archived = False
                         }
                 in
                 ( { model | tasks = model.tasks ++ [ newTask ], taskTitleInput = "" }
@@ -422,6 +424,61 @@ update msg model =
             , Cmd.batch [ Ports.deleteTask id, planSyncCmd ]
             )
 
+        ArchiveTask id ->
+            let
+                updatedTasks =
+                    List.map
+                        (\t ->
+                            if t.id == id then
+                                { t | archived = True }
+
+                            else
+                                t
+                        )
+                        model.tasks
+
+                maybeTask =
+                    List.filter (\t -> t.id == id) model.tasks |> List.head
+
+                saveCmd =
+                    case maybeTask of
+                        Just task ->
+                            Ports.saveTask (Task.encodeTask { task | archived = True })
+
+                        Nothing ->
+                            Cmd.none
+            in
+            ( { model | tasks = updatedTasks }, saveCmd )
+
+        RestoreTask id ->
+            let
+                updatedTasks =
+                    List.map
+                        (\t ->
+                            if t.id == id then
+                                { t | archived = False }
+
+                            else
+                                t
+                        )
+                        model.tasks
+
+                maybeTask =
+                    List.filter (\t -> t.id == id) model.tasks |> List.head
+
+                saveCmd =
+                    case maybeTask of
+                        Just task ->
+                            Ports.saveTask (Task.encodeTask { task | archived = False })
+
+                        Nothing ->
+                            Cmd.none
+            in
+            ( { model | tasks = updatedTasks }, saveCmd )
+
+        SetTarefasTab tab ->
+            ( { model | tarefasTab = tab }, Cmd.none )
+
         CreateRoutine ->
             if String.trim model.routineTitleInput == "" then
                 ( model, Cmd.none )
@@ -459,6 +516,7 @@ update msg model =
                     , origin = "rotina:" ++ routine.title
                     , createdAt = "Rotina (" ++ routine.recurrence ++ ")"
                     , history = []
+                    , archived = False
                     }
             in
             ( { model | tasks = model.tasks ++ [ newTask ] }
@@ -557,6 +615,7 @@ update msg model =
                                 , origin = "plano:" ++ planId ++ ":" ++ taskId
                                 , createdAt = "Plano: " ++ plan.title
                                 , history = []
+                                , archived = False
                                 }
                         in
                         ( { model

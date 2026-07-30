@@ -16,6 +16,7 @@ type alias Model =
     , tasks : List Task
     , routines : List Routine
     , plans : List Plan
+    , tarefasTab : String -- "ativas" or "arquivadas"
     -- Form States
     , taskTitleInput : String
     , routineTitleInput : String
@@ -43,6 +44,9 @@ type Msg
     | SaveEditedTask String
     | ToggleTask String
     | DeleteTaskAction String
+    | ArchiveTask String
+    | RestoreTask String
+    | SetTarefasTab String
     | CreateRoutine
     | DeleteRoutineAction String
     | GenerateTaskFromRoutine Routine
