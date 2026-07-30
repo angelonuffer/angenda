@@ -94,13 +94,21 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
   await page.click('button[type="submit"]');
   await page.waitForTimeout(500);
 
+  // Step 5: Archive the first task
+  console.log('Archiving the first task...');
+  await page.goto('/tarefas');
+  await page.waitForSelector('button[title="Arquivar Tarefa"]', { timeout: 10000 });
+  await page.click('button[title="Arquivar Tarefa"]');
+  await page.waitForTimeout(500);
+
   // Now take the screenshots for each route and layout!
   const routes = [
     'tarefas',
     'tarefas/nova',
     'tarefas/editar/task_0_Comprar_mantimentos_para_a_semana',
     'rotinas',
-    'planos'
+    'planos',
+    'arquivo'
   ];
 
   for (const route of routes) {

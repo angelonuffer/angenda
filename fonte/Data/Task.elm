@@ -11,6 +11,7 @@ type alias Task =
     , origin : String -- e.g. "avulsa", "rotina:id:title", "plano:id:taskId:title"
     , createdAt : String
     , history : List String
+    , archived : Bool
     }
 
 
@@ -23,6 +24,7 @@ encodeTask task =
         , ( "origin", Encode.string task.origin )
         , ( "createdAt", Encode.string task.createdAt )
         , ( "history", Encode.list Encode.string task.history )
+        , ( "archived", Encode.bool task.archived )
         ]
 
 
@@ -35,3 +37,4 @@ taskDecoder =
         |> Decode.andThen (\f -> Decode.map f (Decode.field "origin" Decode.string))
         |> Decode.andThen (\f -> Decode.map f (Decode.field "createdAt" Decode.string))
         |> Decode.andThen (\f -> Decode.map f (Decode.oneOf [ Decode.field "history" (Decode.list Decode.string), Decode.succeed [] ]))
+        |> Decode.andThen (\f -> Decode.map f (Decode.oneOf [ Decode.field "archived" Decode.bool, Decode.succeed False ]))

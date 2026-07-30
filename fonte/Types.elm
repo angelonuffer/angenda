@@ -43,6 +43,8 @@ type Msg
     | SaveEditedTask String
     | ToggleTask String
     | DeleteTaskAction String
+    | ArchiveTask String
+    | RestoreTask String
     | CreateRoutine
     | DeleteRoutineAction String
     | GenerateTaskFromRoutine Routine

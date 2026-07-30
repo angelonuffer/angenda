@@ -1,4 +1,4 @@
-module Pages.Tarefas exposing (viewTarefas)
+module Pages.Arquivo exposing (viewArquivo)
 
 import Data.Task exposing (Task)
 import Html exposing (..)
@@ -7,60 +7,42 @@ import Html.Events exposing (..)
 import Types exposing (Model, Msg(..))
 
 
-viewTarefas : Model -> Html Msg
-viewTarefas model =
+viewArquivo : Model -> Html Msg
+viewArquivo model =
     let
-        activeTasks =
-            List.filter (\t -> not t.archived) model.tasks
+        archivedTasks =
+            List.filter .archived model.tasks
     in
     div [ class "space-y-6" ]
         [ -- Title & Description
           div [ class "flex flex-col sm:flex-row sm:items-center justify-between gap-4" ]
             [ div []
-                [ h2 [ class "text-2xl font-bold text-slate-800" ] [ text "Minhas Tarefas" ]
-                , p [ class "text-slate-600 text-sm mt-1" ] [ text "Veja e gerencie todas as tarefas, incluindo as vindas de rotinas e planos." ]
-                ]
-            , a
-                [ href "/tarefas/nova"
-                , class "bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2.5 rounded-lg transition-colors shadow-sm text-sm flex items-center justify-center gap-2 cursor-pointer no-underline self-start sm:self-auto"
-                ]
-                [ span [ class "material-symbols-outlined", style "font-size" "18px" ] [ text "add" ]
-                , text "Nova Tarefa"
+                [ h2 [ class "text-2xl font-bold text-slate-800" ] [ text "Arquivo de Tarefas" ]
+                , p [ class "text-slate-600 text-sm mt-1" ] [ text "Gerencie suas tarefas arquivadas e restaure-as quando necessário." ]
                 ]
             ]
         , -- Tasks List
           div [ class "bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden" ]
-            [ if List.isEmpty activeTasks then
+            [ if List.isEmpty archivedTasks then
                 div [ class "p-12 text-center space-y-3" ]
-                    [ span [ class "material-symbols-outlined text-slate-300 text-5xl block mx-auto" ] [ text "task_alt" ]
-                    , h3 [ class "text-lg font-medium text-slate-700" ] [ text "Nenhuma tarefa encontrada" ]
-                    , p [ class "text-slate-500 text-sm max-w-md mx-auto" ] [ text "Crie tarefas avulsas no botão acima ou gere tarefas a partir de suas rotinas ou planos!" ]
+                    [ span [ class "material-symbols-outlined text-slate-300 text-5xl block mx-auto" ] [ text "archive" ]
+                    , h3 [ class "text-lg font-medium text-slate-700" ] [ text "Nenhuma tarefa arquivada" ]
+                    , p [ class "text-slate-500 text-sm max-w-md mx-auto" ] [ text "Suas tarefas arquivadas aparecerão aqui." ]
                     ]
 
               else
                 ul [ class "divide-y divide-slate-100" ]
-                    (List.map viewTaskItem activeTasks)
+                    (List.map viewArchivedTaskItem archivedTasks)
             ]
         ]
 
 
-viewTaskItem : Task -> Html Msg
-viewTaskItem task =
+viewArchivedTaskItem : Task -> Html Msg
+viewArchivedTaskItem task =
     li [ class <| "p-4 flex items-center justify-between gap-4 hover:bg-slate-50 transition-colors " ++ if task.completed then "opacity-75" else "" ]
         [ div [ class "flex items-start gap-3 flex-1" ]
-            [ button
-                [ type_ "button"
-                , onClick (ToggleTask task.id)
-                , class <|
-                    "mt-0.5 w-6 h-6 rounded-full border flex items-center justify-center transition-all "
-                        ++ (if task.completed then
-                                "bg-amber-500 border-amber-500 text-white"
-
-                            else
-                                "border-slate-300 text-transparent hover:border-red-500"
-                           )
-                ]
-                [ span [ class "material-symbols-outlined", style "font-size" "14px", style "font-weight" "bold" ] [ text "check" ] ]
+            [ div [ class <| "mt-1 w-5 h-5 rounded-full border flex items-center justify-center " ++ if task.completed then "bg-amber-500 border-amber-500 text-white" else "border-slate-300 text-transparent" ]
+                [ span [ class "material-symbols-outlined", style "font-size" "12px", style "font-weight" "bold" ] [ text "check" ] ]
             , div [ class "space-y-1" ]
                 [ p
                     [ class <|
@@ -81,19 +63,13 @@ viewTaskItem task =
                 ]
             ]
         , div [ class "flex items-center gap-1" ]
-            [ a
-                [ href <| "/tarefas/editar/" ++ task.id
-                , class "text-slate-400 hover:text-amber-600 p-2 rounded-lg hover:bg-amber-50 transition-all flex items-center justify-center no-underline cursor-pointer"
-                , title "Editar Tarefa"
-                ]
-                [ span [ class "material-symbols-outlined", style "font-size" "20px" ] [ text "edit" ] ]
-            , button
+            [ button
                 [ type_ "button"
-                , onClick (ArchiveTask task.id)
-                , class "text-slate-400 hover:text-amber-600 p-2 rounded-lg hover:bg-amber-50 transition-all flex items-center justify-center"
-                , title "Arquivar Tarefa"
+                , onClick (RestoreTask task.id)
+                , class "text-slate-400 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 transition-all flex items-center justify-center"
+                , title "Restaurar Tarefa"
                 ]
-                [ span [ class "material-symbols-outlined", style "font-size" "20px" ] [ text "archive" ] ]
+                [ span [ class "material-symbols-outlined", style "font-size" "20px" ] [ text "unarchive" ] ]
             ]
         ]
 
@@ -133,7 +109,6 @@ viewOriginBadge origin =
             ]
 
     else if String.startsWith "plano:" origin then
-        -- Format "plano:planId:planTaskId" -> we can just display "Plano"
         span [ class "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-100" ]
             [ span [ class "material-symbols-outlined", style "font-size" "12px" ] [ text "schema" ]
             , text "Plano"
