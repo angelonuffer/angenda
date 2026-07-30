@@ -9,6 +9,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Json.Decode as Decode
+import Pages.Arquivo exposing (viewArquivo)
 import Pages.NovaTarefa exposing (viewNovaTarefa)
 import Pages.Planos exposing (viewPlanos)
 import Pages.Rotinas exposing (viewRotinas)
@@ -148,6 +149,7 @@ update msg model =
                         , origin = "avulsa"
                         , createdAt = "Agora"
                         , history = []
+                        , archived = False
                         }
                 in
                 ( { model | tasks = model.tasks ++ [ newTask ], taskTitleInput = "" }
@@ -422,6 +424,64 @@ update msg model =
             , Cmd.batch [ Ports.deleteTask id, planSyncCmd ]
             )
 
+        ArchiveTask id ->
+            let
+                updatedTasks =
+                    List.map
+                        (\t ->
+                            if t.id == id then
+                                { t | archived = True }
+
+                            else
+                                t
+                        )
+                        model.tasks
+
+                maybeTask =
+                    List.filter (\t -> t.id == id) model.tasks |> List.head
+            in
+            case maybeTask of
+                Just task ->
+                    let
+                        updatedTask =
+                            { task | archived = True }
+                    in
+                    ( { model | tasks = updatedTasks }
+                    , Ports.saveTask (Task.encodeTask updatedTask)
+                    )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
+        RestoreTask id ->
+            let
+                updatedTasks =
+                    List.map
+                        (\t ->
+                            if t.id == id then
+                                { t | archived = False }
+
+                            else
+                                t
+                        )
+                        model.tasks
+
+                maybeTask =
+                    List.filter (\t -> t.id == id) model.tasks |> List.head
+            in
+            case maybeTask of
+                Just task ->
+                    let
+                        updatedTask =
+                            { task | archived = False }
+                    in
+                    ( { model | tasks = updatedTasks }
+                    , Ports.saveTask (Task.encodeTask updatedTask)
+                    )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
         CreateRoutine ->
             if String.trim model.routineTitleInput == "" then
                 ( model, Cmd.none )
@@ -459,6 +519,7 @@ update msg model =
                     , origin = "rotina:" ++ routine.title
                     , createdAt = "Rotina (" ++ routine.recurrence ++ ")"
                     , history = []
+                    , archived = False
                     }
             in
             ( { model | tasks = model.tasks ++ [ newTask ] }
@@ -557,6 +618,7 @@ update msg model =
                                 , origin = "plano:" ++ planId ++ ":" ++ taskId
                                 , createdAt = "Plano: " ++ plan.title
                                 , history = []
+                                , archived = False
                                 }
                         in
                         ( { model
@@ -716,6 +778,9 @@ view model =
 
                     Planos ->
                         viewPlanos model
+
+                    Arquivo ->
+                        viewArquivo model
                 ]
             , viewFooter
             ]
@@ -750,6 +815,7 @@ viewHeader currentRoute =
                     )
                 , viewNavLink "/rotinas" "repeat" "Rotinas" (currentRoute == Rotinas)
                 , viewNavLink "/planos" "schema" "Planos" (currentRoute == Planos)
+                , viewNavLink "/arquivo" "archive" "Arquivo" (currentRoute == Arquivo)
                 ]
             ]
         ]
@@ -759,7 +825,7 @@ viewNavLink url iconName label isActive =
     a
         [ href url
         , class <|
-            "flex items-center gap-1.5 px-4 py-2 rounded-md font-medium text-sm transition-colors "
+            "flex items-center gap-1.5 px-2.5 sm:px-4 py-2 rounded-md font-medium text-xs sm:text-sm transition-colors "
                 ++ (if isActive then
                         "bg-white text-red-700 shadow-sm"
 
