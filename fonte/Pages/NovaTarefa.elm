@@ -58,6 +58,17 @@ viewNovaTarefa model =
                         ]
                         []
                     ]
+                , div []
+                    [ label [ for "new-task-date", class "block text-sm font-semibold text-slate-700 mb-1" ] [ text "Data da Tarefa" ]
+                    , input
+                        [ type_ "date"
+                        , id "new-task-date"
+                        , value model.taskDateInput
+                        , onInput InputTaskDate
+                        , class "w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 text-slate-800"
+                        ]
+                        []
+                    ]
                 , div [ class "flex items-center justify-end gap-3 pt-2" ]
                     [ a
                         [ href "/tarefas"

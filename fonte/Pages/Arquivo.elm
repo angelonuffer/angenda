@@ -59,6 +59,7 @@ viewArchivedTaskItem task =
                     [ -- Badge
                       viewOriginBadge task.origin
                     , viewHistoryBadge task.history
+                    , viewDateBadge task.date
                     ]
                 ]
             ]
@@ -72,6 +73,28 @@ viewArchivedTaskItem task =
                 [ span [ class "material-symbols-outlined", style "font-size" "20px" ] [ text "unarchive" ] ]
             ]
         ]
+
+
+formatDate : String -> String
+formatDate rawDate =
+    case String.split "-" rawDate of
+        [ year, month, day ] ->
+            day ++ "/" ++ month ++ "/" ++ year
+
+        _ ->
+            rawDate
+
+
+viewDateBadge : String -> Html Msg
+viewDateBadge dateStr =
+    if String.trim dateStr == "" then
+        text ""
+
+    else
+        span [ class "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100" ]
+            [ span [ class "material-symbols-outlined", style "font-size" "12px" ] [ text "calendar_month" ]
+            , text (formatDate dateStr)
+            ]
 
 
 viewHistoryBadge : List String -> Html Msg
