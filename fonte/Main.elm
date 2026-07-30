@@ -42,6 +42,7 @@ init _ url key =
       , routines = []
       , plans = []
       , taskTitleInput = ""
+      , taskDateInput = ""
       , routineTitleInput = ""
       , routineRecurrenceInput = "Diária"
       , planTitleInput = ""
@@ -71,41 +72,50 @@ update msg model =
                 newRoute =
                     Route.fromUrl url
 
-                newTitleInput =
+                ( newTitleInput, newDateInput ) =
                     case newRoute of
                         Route.EditarTarefa id ->
-                            model.tasks
-                                |> List.filter (\t -> t.id == id)
-                                |> List.head
-                                |> Maybe.map .title
-                                |> Maybe.withDefault ""
+                            let
+                                maybeTask =
+                                    model.tasks
+                                        |> List.filter (\t -> t.id == id)
+                                        |> List.head
+                            in
+                            ( maybeTask |> Maybe.map .title |> Maybe.withDefault ""
+                            , maybeTask |> Maybe.map .date |> Maybe.withDefault ""
+                            )
 
                         _ ->
-                            ""
+                            ( "", "" )
             in
-            ( { model | route = newRoute, taskTitleInput = newTitleInput }, Cmd.none )
+            ( { model | route = newRoute, taskTitleInput = newTitleInput, taskDateInput = newDateInput }, Cmd.none )
 
         DataLoadedRaw rawValue ->
             case Decode.decodeValue Types.loadedDataDecoder rawValue of
                 Ok payload ->
                     let
-                        newTitleInput =
+                        ( newTitleInput, newDateInput ) =
                             case model.route of
                                 Route.EditarTarefa id ->
-                                    payload.tasks
-                                        |> List.filter (\t -> t.id == id)
-                                        |> List.head
-                                        |> Maybe.map .title
-                                        |> Maybe.withDefault model.taskTitleInput
+                                    let
+                                        maybeTask =
+                                            payload.tasks
+                                                |> List.filter (\t -> t.id == id)
+                                                |> List.head
+                                    in
+                                    ( maybeTask |> Maybe.map .title |> Maybe.withDefault model.taskTitleInput
+                                    , maybeTask |> Maybe.map .date |> Maybe.withDefault model.taskDateInput
+                                    )
 
                                 _ ->
-                                    model.taskTitleInput
+                                    ( model.taskTitleInput, model.taskDateInput )
                     in
                     ( { model
                         | tasks = payload.tasks
                         , routines = payload.routines
                         , plans = payload.plans
                         , taskTitleInput = newTitleInput
+                        , taskDateInput = newDateInput
                       }
                     , Cmd.none
                     )
@@ -115,6 +125,9 @@ update msg model =
 
         InputTaskTitle val ->
             ( { model | taskTitleInput = val }, Cmd.none )
+
+        InputTaskDate val ->
+            ( { model | taskDateInput = val }, Cmd.none )
 
         InputRoutineTitle val ->
             ( { model | routineTitleInput = val }, Cmd.none )
@@ -150,9 +163,10 @@ update msg model =
                         , createdAt = "Agora"
                         , history = []
                         , archived = False
+                        , date = model.taskDateInput
                         }
                 in
-                ( { model | tasks = model.tasks ++ [ newTask ], taskTitleInput = "" }
+                ( { model | tasks = model.tasks ++ [ newTask ], taskTitleInput = "", taskDateInput = "" }
                 , Cmd.batch
                     [ Ports.saveTask (Task.encodeTask newTask)
                     , Nav.pushUrl model.key "/tarefas"
@@ -177,9 +191,9 @@ update msg model =
                         let
                             updatedTask =
                                 if trimmedTitle /= task.title then
-                                    { task | title = trimmedTitle, history = task.history ++ [ task.title ] }
+                                    { task | title = trimmedTitle, history = task.history ++ [ task.title ], date = model.taskDateInput }
                                 else
-                                    task
+                                    { task | date = model.taskDateInput }
 
                             updatedTasks =
                                 List.map
@@ -234,7 +248,7 @@ update msg model =
                                     _ ->
                                         ( model.plans, Cmd.none )
                         in
-                        ( { model | tasks = updatedTasks, plans = updatedPlans, taskTitleInput = "" }
+                        ( { model | tasks = updatedTasks, plans = updatedPlans, taskTitleInput = "", taskDateInput = "" }
                         , Cmd.batch
                             [ Ports.saveTask (Task.encodeTask updatedTask)
                             , planSyncCmd
@@ -520,6 +534,7 @@ update msg model =
                     , createdAt = "Rotina (" ++ routine.recurrence ++ ")"
                     , history = []
                     , archived = False
+                    , date = ""
                     }
             in
             ( { model | tasks = model.tasks ++ [ newTask ] }
@@ -619,6 +634,7 @@ update msg model =
                                 , createdAt = "Plano: " ++ plan.title
                                 , history = []
                                 , archived = False
+                                , date = ""
                                 }
                         in
                         ( { model

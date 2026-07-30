@@ -18,6 +18,7 @@ type alias Model =
     , plans : List Plan
     -- Form States
     , taskTitleInput : String
+    , taskDateInput : String
     , routineTitleInput : String
     , routineRecurrenceInput : String
     , planTitleInput : String
@@ -33,6 +34,7 @@ type Msg
     | DataLoadedRaw Decode.Value
     -- Form Inputs
     | InputTaskTitle String
+    | InputTaskDate String
     | InputRoutineTitle String
     | InputRoutineRecurrence String
     | InputPlanTitle String
