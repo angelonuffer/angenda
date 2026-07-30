@@ -72,6 +72,7 @@ viewTaskItem task =
                 , div [ class "flex flex-wrap items-center gap-2" ]
                     [ -- Badge
                       viewOriginBadge task.origin
+                    , viewHistoryBadge task.history
                     ]
                 ]
             ]
@@ -91,6 +92,22 @@ viewTaskItem task =
                 [ span [ class "material-symbols-outlined", style "font-size" "20px" ] [ text "delete" ] ]
             ]
         ]
+
+
+viewHistoryBadge : List String -> Html Msg
+viewHistoryBadge history =
+    let
+        versionCount =
+            List.length history
+    in
+    if versionCount == 0 then
+        text ""
+
+    else
+        span [ class "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100" ]
+            [ span [ class "material-symbols-outlined", style "font-size" "12px" ] [ text "history" ]
+            , text <| String.fromInt (versionCount + 1) ++ "ª versão"
+            ]
 
 
 viewOriginBadge : String -> Html Msg

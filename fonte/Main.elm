@@ -147,6 +147,7 @@ update msg model =
                         , completed = False
                         , origin = "avulsa"
                         , createdAt = "Agora"
+                        , history = []
                         }
                 in
                 ( { model | tasks = model.tasks ++ [ newTask ], taskTitleInput = "" }
@@ -173,7 +174,10 @@ update msg model =
                     Just task ->
                         let
                             updatedTask =
-                                { task | title = trimmedTitle }
+                                if trimmedTitle /= task.title then
+                                    { task | title = trimmedTitle, history = task.history ++ [ task.title ] }
+                                else
+                                    task
 
                             updatedTasks =
                                 List.map
@@ -454,6 +458,7 @@ update msg model =
                     , completed = False
                     , origin = "rotina:" ++ routine.title
                     , createdAt = "Rotina (" ++ routine.recurrence ++ ")"
+                    , history = []
                     }
             in
             ( { model | tasks = model.tasks ++ [ newTask ] }
@@ -551,6 +556,7 @@ update msg model =
                                 , completed = False
                                 , origin = "plano:" ++ planId ++ ":" ++ taskId
                                 , createdAt = "Plano: " ++ plan.title
+                                , history = []
                                 }
                         in
                         ( { model

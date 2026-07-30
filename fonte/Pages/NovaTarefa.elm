@@ -17,6 +17,7 @@ viewNovaTarefa model =
                     , pageDesc = "Edite os detalhes de sua tarefa."
                     , submitMsg = SaveEditedTask id
                     , buttonText = "Salvar"
+                    , editingId = Just id
                     }
 
                 _ ->
@@ -24,7 +25,16 @@ viewNovaTarefa model =
                     , pageDesc = "Crie uma nova tarefa avulsa para sua lista de tarefas."
                     , submitMsg = CreateTask
                     , buttonText = "Adicionar"
+                    , editingId = Nothing
                     }
+
+        maybeEditingTask =
+            case config.editingId of
+                Just id ->
+                    model.tasks |> List.filter (\t -> t.id == id) |> List.head
+
+                Nothing ->
+                    Nothing
     in
     div [ class "space-y-6 max-w-xl mx-auto" ]
         [ -- Title & Description
@@ -62,4 +72,30 @@ viewNovaTarefa model =
                     ]
                 ]
             ]
+        , -- Version History Section
+          case maybeEditingTask of
+            Just task ->
+                if List.isEmpty task.history then
+                    text ""
+
+                else
+                    div [ class "bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-3" ]
+                        [ div [ class "flex items-center gap-2 text-slate-700 font-semibold text-sm border-b border-slate-100 pb-2" ]
+                            [ span [ class "material-symbols-outlined text-slate-500", style "font-size" "18px" ] [ text "history" ]
+                            , text "Histórico de Versões"
+                            ]
+                        , ul [ class "space-y-2 text-sm text-slate-600" ]
+                            (List.indexedMap
+                                (\index oldTitle ->
+                                    li [ class "flex items-start gap-2.5 py-1" ]
+                                        [ span [ class "text-slate-400 font-medium" ] [ text ("v" ++ String.fromInt (index + 1) ++ ":") ]
+                                        , span [ class "text-slate-700 font-normal italic" ] [ text oldTitle ]
+                                        ]
+                                )
+                                task.history
+                            )
+                        ]
+
+            Nothing ->
+                text ""
         ]
