@@ -18,6 +18,23 @@ viewNovaTarefa model =
                     , submitMsg = SaveEditedTask id
                     , buttonText = "Salvar"
                     , editingId = Just id
+                    , cancelHref = "/tarefas"
+                    }
+
+                Route.AdicionarTarefa (Just planId) ->
+                    let
+                        maybePlan =
+                            model.plans |> List.filter (\p -> p.id == planId) |> List.head
+
+                        planTitle =
+                            maybePlan |> Maybe.map .title |> Maybe.withDefault "Plano"
+                    in
+                    { pageTitle = "Nova Tarefa no Plano"
+                    , pageDesc = "Crie uma nova tarefa vinculada ao plano: " ++ planTitle ++ "."
+                    , submitMsg = CreateTask
+                    , buttonText = "Adicionar"
+                    , editingId = Nothing
+                    , cancelHref = "/planos"
                     }
 
                 _ ->
@@ -26,6 +43,7 @@ viewNovaTarefa model =
                     , submitMsg = CreateTask
                     , buttonText = "Adicionar"
                     , editingId = Nothing
+                    , cancelHref = "/tarefas"
                     }
 
         maybeEditingTask =
@@ -71,7 +89,7 @@ viewNovaTarefa model =
                     ]
                 , div [ class "flex items-center justify-end gap-3 pt-2" ]
                     [ a
-                        [ href "/tarefas"
+                        [ href config.cancelHref
                         , class "px-5 py-2 rounded-lg border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors text-center text-sm no-underline"
                         ]
                         [ text "Cancelar" ]
