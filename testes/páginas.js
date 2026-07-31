@@ -62,18 +62,30 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
 
   // Manage tasks on the newly created plan
   await page.click('button:has-text("Gerenciar Tarefas")');
-  await page.waitForSelector('#new-plan-task');
+  await page.waitForSelector('#add-plan-task-btn');
 
-  await page.fill('#new-plan-task', 'Registrar domínio .com.br');
+  // Step 3a: Add first plan task via the new page
   await page.click('#add-plan-task-btn');
+  await page.waitForSelector('#new-task-title');
+  await page.fill('#new-task-title', 'Registrar domínio .com.br');
+  await page.click('button[type="submit"]');
+  await page.waitForSelector('#add-plan-task-btn');
   await page.waitForTimeout(200);
 
-  await page.fill('#new-plan-task', 'Configurar hospedagem na Cloudflare');
+  // Step 3b: Add second plan task
   await page.click('#add-plan-task-btn');
+  await page.waitForSelector('#new-task-title');
+  await page.fill('#new-task-title', 'Configurar hospedagem na Cloudflare');
+  await page.click('button[type="submit"]');
+  await page.waitForSelector('#add-plan-task-btn');
   await page.waitForTimeout(200);
 
-  await page.fill('#new-plan-task', 'Subir arquivos do build');
+  // Step 3c: Add third plan task
   await page.click('#add-plan-task-btn');
+  await page.waitForSelector('#new-task-title');
+  await page.fill('#new-task-title', 'Subir arquivos do build');
+  await page.click('button[type="submit"]');
+  await page.waitForSelector('#add-plan-task-btn');
   await page.waitForTimeout(200);
 
   // Complete the first step of the plan

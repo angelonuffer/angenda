@@ -176,29 +176,86 @@ update msg model =
                 ( model, Cmd.none )
 
             else
-                let
-                    newId =
-                        "task_" ++ String.fromInt (List.length model.tasks) ++ "_" ++ model.taskTitleInput
-                        -- Simple unique key, indexdb or JS will keep it safe, but we can make a pseudo-random or simple timestamp id
-                        |> String.replace " " "_"
+                case model.route of
+                    Route.AdicionarTarefa (Just planId) ->
+                        let
+                            taskId =
+                                "plantask_" ++ planId ++ "_" ++ String.fromInt (List.length model.tasks)
 
-                    newTask =
-                        { id = newId
-                        , title = model.taskTitleInput
-                        , completed = False
-                        , origin = "avulsa"
-                        , createdAt = "Agora"
-                        , history = []
-                        , archived = False
-                        , date = model.taskDateInput
-                        }
-                in
-                ( { model | tasks = model.tasks ++ [ newTask ], taskTitleInput = "", taskDateInput = "" }
-                , Cmd.batch
-                    [ Ports.saveTask (Task.encodeTask newTask)
-                    , Nav.pushUrl model.key "/tarefas"
-                    ]
-                )
+                            newPlanTask =
+                                { id = taskId
+                                , title = model.taskTitleInput
+                                , completed = False
+                                }
+
+                            updatedPlans =
+                                List.map
+                                    (\p ->
+                                        if p.id == planId then
+                                            { p | tasks = p.tasks ++ [ newPlanTask ] }
+
+                                        else
+                                            p
+                                    )
+                                    model.plans
+
+                            maybePlan =
+                                List.filter (\p -> p.id == planId) updatedPlans |> List.head
+                        in
+                        case maybePlan of
+                            Just plan ->
+                                let
+                                    newTask =
+                                        { id = "task_" ++ taskId
+                                        , title = model.taskTitleInput
+                                        , completed = False
+                                        , origin = "plano:" ++ planId ++ ":" ++ taskId
+                                        , createdAt = "Plano: " ++ plan.title
+                                        , history = []
+                                        , archived = False
+                                        , date = model.taskDateInput
+                                        }
+                                in
+                                ( { model
+                                    | plans = updatedPlans
+                                    , tasks = model.tasks ++ [ newTask ]
+                                    , taskTitleInput = ""
+                                    , taskDateInput = ""
+                                  }
+                                , Cmd.batch
+                                    [ Ports.savePlan (Plan.encodePlan plan)
+                                    , Ports.saveTask (Task.encodeTask newTask)
+                                    , Nav.pushUrl model.key "/planos"
+                                    ]
+                                )
+
+                            Nothing ->
+                                ( model, Cmd.none )
+
+                    _ ->
+                        let
+                            newId =
+                                "task_" ++ String.fromInt (List.length model.tasks) ++ "_" ++ model.taskTitleInput
+                                |> String.replace " " "_"
+
+                            newTask =
+                                { id = newId
+                                , title = model.taskTitleInput
+                                , completed = False
+                                , origin = "avulsa"
+                                , createdAt = "Agora"
+                                {-- Simple unique key, indexdb or JS will keep it safe, but we can make a pseudo-random or simple timestamp id --}
+                                , history = []
+                                , archived = False
+                                , date = model.taskDateInput
+                                }
+                        in
+                        ( { model | tasks = model.tasks ++ [ newTask ], taskTitleInput = "", taskDateInput = "" }
+                        , Cmd.batch
+                            [ Ports.saveTask (Task.encodeTask newTask)
+                            , Nav.pushUrl model.key "/tarefas"
+                            ]
+                        )
 
         SaveEditedTask id ->
             let
@@ -834,7 +891,7 @@ view model =
                     Tarefas ->
                         viewTarefas model
 
-                    AdicionarTarefa ->
+                    AdicionarTarefa _ ->
                         viewNovaTarefa model
 
                     Route.EditarTarefa _ ->
@@ -910,7 +967,7 @@ viewHeader model =
                             Tarefas ->
                                 True
 
-                            AdicionarTarefa ->
+                            AdicionarTarefa _ ->
                                 True
 
                             Route.EditarTarefa _ ->

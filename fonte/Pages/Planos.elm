@@ -127,26 +127,16 @@ viewPlanItem model plan =
         , if isEditing then
             div [ class "p-5 bg-white space-y-4 border-t border-slate-100" ]
                 [ h5 [ class "font-semibold text-slate-700 text-sm" ] [ text "Sequência de Tarefas do Plano" ]
-                , -- Form to add sequential tasks
-                  Html.form
-                    [ onSubmit (AddPlanTask plan.id)
-                    , class "flex gap-2"
-                    ]
-                    [ input
-                        [ type_ "text"
-                        , id "new-plan-task"
-                        , placeholder "Insira o próximo passo do plano..."
-                        , value model.newPlanTaskTitle
-                        , onInput InputPlanTaskTitle
-                        , class "flex-1 border border-slate-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm text-slate-800"
-                        ]
-                        []
-                    , button
-                        [ type_ "submit"
+                , -- Button to navigate to new task page
+                  div [ class "flex justify-end" ]
+                    [ a
+                        [ href <| "/tarefas/nova/" ++ plan.id
                         , id "add-plan-task-btn"
-                        , class "bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-1.5 rounded-lg text-sm transition-colors"
+                        , class "bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-1.5 rounded-lg text-sm transition-colors no-underline inline-flex items-center gap-1.5 cursor-pointer shadow-sm"
                         ]
-                        [ text "Adicionar" ]
+                        [ span [ class "material-symbols-outlined", style "font-size" "18px" ] [ text "playlist_add" ]
+                        , text "Adicionar Tarefa ao Plano"
+                        ]
                     ]
                 , -- List of current plan tasks
                   if List.isEmpty plan.tasks then
