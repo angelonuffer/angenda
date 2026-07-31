@@ -1,17 +1,270 @@
 module Pages.Tarefas exposing (viewTarefas)
 
 import Data.Task exposing (Task)
+import Dict exposing (Dict)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Types exposing (Model, Msg(..))
 
 
+-- DATE HELPER TYPES & FUNCTIONS
+
+type alias DateRecord =
+    { year : Int, month : Int, day : Int }
+
+
+parseDate : String -> Maybe DateRecord
+parseDate str =
+    case String.split "-" (String.trim str) of
+        [ yStr, mStr, dStr ] ->
+            Maybe.map3 DateRecord
+                (String.toInt yStr)
+                (String.toInt mStr)
+                (String.toInt dStr)
+
+        _ ->
+            Nothing
+
+
+toAbsoluteDays : DateRecord -> Int
+toAbsoluteDays date =
+    let
+        ( y, m ) =
+            if date.month <= 2 then
+                ( date.year - 1, date.month + 12 )
+
+            else
+                ( date.year, date.month )
+    in
+    365 * y + (y // 4) - (y // 100) + (y // 400) + (153 * (m + 1) // 5) + date.day
+
+
+weekdayIndex : DateRecord -> Int
+weekdayIndex date =
+    let
+        rem =
+            toAbsoluteDays date |> modBy 7
+    in
+    -- rem: 0 = Sat, 1 = Sun, 2 = Mon, 3 = Tue, 4 = Wed, 5 = Thu, 6 = Fri
+    -- We map to Mon = 0, Tue = 1, Wed = 2, Thu = 3, Fri = 4, Sat = 5, Sun = 6
+    case rem of
+        2 ->
+            0
+
+        3 ->
+            1
+
+        4 ->
+            2
+
+        5 ->
+            3
+
+        6 ->
+            4
+
+        0 ->
+            5
+
+        1 ->
+            6
+
+        _ ->
+            0
+
+
+isNextMonth : DateRecord -> DateRecord -> Bool
+isNextMonth todayD taskD =
+    if todayD.month == 12 then
+        taskD.year == todayD.year + 1 && taskD.month == 1
+
+    else
+        taskD.year == todayD.year && taskD.month == todayD.month + 1
+
+
+-- TASK GROUPING TYPES & FUNCTIONS
+
+type TaskGroup
+    = SemData
+    | Atrasadas
+    | Hoje
+    | Amanha
+    | EstaSemana
+    | SemanaQueVem
+    | EsteMes
+    | MesQueVem
+    | EsteAno
+    | AnoQueVem
+    | PorAno Int
+
+
+groupOrder : TaskGroup -> Int
+groupOrder g =
+    case g of
+        SemData ->
+            1
+
+        Atrasadas ->
+            2
+
+        Hoje ->
+            3
+
+        Amanha ->
+            4
+
+        EstaSemana ->
+            5
+
+        SemanaQueVem ->
+            6
+
+        EsteMes ->
+            7
+
+        MesQueVem ->
+            8
+
+        EsteAno ->
+            9
+
+        AnoQueVem ->
+            10
+
+        PorAno yr ->
+            11 + yr
+
+
+groupTitle : TaskGroup -> String
+groupTitle g =
+    case g of
+        SemData ->
+            "Sem data"
+
+        Atrasadas ->
+            "Atrasadas"
+
+        Hoje ->
+            "Hoje"
+
+        Amanha ->
+            "Amanhã"
+
+        EstaSemana ->
+            "Esta semana"
+
+        SemanaQueVem ->
+            "Semana que vem"
+
+        EsteMes ->
+            "Este mês"
+
+        MesQueVem ->
+            "Mês que vem"
+
+        EsteAno ->
+            "Este ano"
+
+        AnoQueVem ->
+            "Ano que vem"
+
+        PorAno yr ->
+            String.fromInt yr
+
+
+classifyTask : DateRecord -> Task -> TaskGroup
+classifyTask todayDate task =
+    case parseDate task.date of
+        Nothing ->
+            SemData
+
+        Just taskDate ->
+            let
+                todayAbs =
+                    toAbsoluteDays todayDate
+
+                taskAbs =
+                    toAbsoluteDays taskDate
+
+                daysDiff =
+                    taskAbs - todayAbs
+
+                todayWeekdayIdx =
+                    weekdayIndex todayDate
+
+                thisMonday =
+                    todayAbs - todayWeekdayIdx
+            in
+            if not task.completed && daysDiff < 0 then
+                Atrasadas
+
+            else if daysDiff == 0 then
+                Hoje
+
+            else if daysDiff == 1 then
+                Amanha
+
+            else if taskAbs >= thisMonday && taskAbs <= thisMonday + 6 then
+                EstaSemana
+
+            else if taskAbs >= thisMonday + 7 && taskAbs <= thisMonday + 13 then
+                SemanaQueVem
+
+            else if taskDate.year == todayDate.year && taskDate.month == todayDate.month then
+                EsteMes
+
+            else if isNextMonth todayDate taskDate then
+                MesQueVem
+
+            else if taskDate.year == todayDate.year then
+                EsteAno
+
+            else if taskDate.year == todayDate.year + 1 then
+                AnoQueVem
+
+            else if taskDate.year > todayDate.year + 1 then
+                PorAno taskDate.year
+
+            else
+                Atrasadas
+
+
+groupTasks : DateRecord -> List Task -> List ( TaskGroup, List Task )
+groupTasks todayDate tasks =
+    let
+        insertTask : Task -> Dict Int ( TaskGroup, List Task ) -> Dict Int ( TaskGroup, List Task )
+        insertTask task acc =
+            let
+                g =
+                    classifyTask todayDate task
+
+                key =
+                    groupOrder g
+            in
+            case Dict.get key acc of
+                Just ( _, list ) ->
+                    Dict.insert key ( g, list ++ [ task ] ) acc
+
+                Nothing ->
+                    Dict.insert key ( g, [ task ] ) acc
+
+        groupedDict =
+            List.foldl insertTask Dict.empty tasks
+    in
+    Dict.values groupedDict
+
+
+-- VIEWS
+
 viewTarefas : Model -> Html Msg
 viewTarefas model =
     let
         activeTasks =
             List.filter (\t -> not t.archived) model.tasks
+
+        maybeToday =
+            parseDate model.today
     in
     div [ class "space-y-6" ]
         [ -- Title & Description
@@ -29,17 +282,40 @@ viewTarefas model =
                 ]
             ]
         , -- Tasks List
-          div [ class "bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden" ]
-            [ if List.isEmpty activeTasks then
-                div [ class "p-12 text-center space-y-3" ]
+          if List.isEmpty activeTasks then
+            div [ class "bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden" ]
+                [ div [ class "p-12 text-center space-y-3" ]
                     [ span [ class "material-symbols-outlined text-slate-300 text-5xl block mx-auto" ] [ text "task_alt" ]
                     , h3 [ class "text-lg font-medium text-slate-700" ] [ text "Nenhuma tarefa encontrada" ]
                     , p [ class "text-slate-500 text-sm max-w-md mx-auto" ] [ text "Crie tarefas avulsas no botão acima ou gere tarefas a partir de suas rotinas ou planos!" ]
                     ]
+                ]
 
-              else
-                ul [ class "divide-y divide-slate-100" ]
-                    (List.map viewTaskItem activeTasks)
+          else
+            case maybeToday of
+                Just todayDate ->
+                    div [ class "space-y-6" ]
+                        (List.map viewGroupSection (groupTasks todayDate activeTasks))
+
+                Nothing ->
+                    div [ class "bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden" ]
+                        [ ul [ class "divide-y divide-slate-100" ]
+                            (List.map viewTaskItem activeTasks)
+                        ]
+        ]
+
+
+viewGroupSection : ( TaskGroup, List Task ) -> Html Msg
+viewGroupSection ( g, tasks ) =
+    div [ class "space-y-2" ]
+        [ h3 [ class "text-sm font-bold text-slate-500 uppercase tracking-wider px-1" ]
+            [ text (groupTitle g)
+            , span [ class "ml-2 text-xs font-semibold bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full" ]
+                [ text (String.fromInt (List.length tasks)) ]
+            ]
+        , div [ class "bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden" ]
+            [ ul [ class "divide-y divide-slate-100" ]
+                (List.map viewTaskItem tasks)
             ]
         ]
 

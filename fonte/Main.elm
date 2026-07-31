@@ -22,7 +22,7 @@ import Url exposing (Url)
 
 -- MAIN
 
-main : Program () Model Msg
+main : Program String Model Msg
 main =
     Browser.application
         { init = init
@@ -34,8 +34,8 @@ main =
         }
 
 
-init : () -> Url -> Nav.Key -> ( Model, Cmd Msg )
-init _ url key =
+init : String -> Url -> Nav.Key -> ( Model, Cmd Msg )
+init today url key =
     ( { key = key
       , route = Route.fromUrl url
       , tasks = []
@@ -49,6 +49,7 @@ init _ url key =
       , planDescInput = ""
       , editingPlanId = Nothing
       , newPlanTaskTitle = ""
+      , today = today
       }
     , Ports.loadData ()
     )
@@ -109,15 +110,34 @@ update msg model =
 
                                 _ ->
                                     ( model.taskTitleInput, model.taskDateInput )
+
+                        -- Automatic archiving of completed past tasks on load
+                        tasksToArchive =
+                            List.filter (\t -> t.completed && t.date /= "" && t.date < model.today && not t.archived) payload.tasks
+
+                        archivedTasks =
+                            List.map
+                                (\t ->
+                                    if t.completed && t.date /= "" && t.date < model.today && not t.archived then
+                                        { t | archived = True }
+                                    else
+                                        t
+                                )
+                                payload.tasks
+
+                        archiveCmds =
+                            tasksToArchive
+                                |> List.map (\t -> Ports.saveTask (Task.encodeTask { t | archived = True }))
+                                |> Cmd.batch
                     in
                     ( { model
-                        | tasks = payload.tasks
+                        | tasks = archivedTasks
                         , routines = payload.routines
                         , plans = payload.plans
                         , taskTitleInput = newTitleInput
                         , taskDateInput = newDateInput
                       }
-                    , Cmd.none
+                    , archiveCmds
                     )
 
                 Err _ ->
@@ -189,11 +209,17 @@ update msg model =
                 case maybeTask of
                     Just task ->
                         let
-                            updatedTask =
+                            baseUpdatedTask =
                                 if trimmedTitle /= task.title then
                                     { task | title = trimmedTitle, history = task.history ++ [ task.title ], date = model.taskDateInput }
                                 else
                                     { task | date = model.taskDateInput }
+
+                            shouldArchive =
+                                baseUpdatedTask.completed && baseUpdatedTask.date /= "" && baseUpdatedTask.date < model.today
+
+                            updatedTask =
+                                { baseUpdatedTask | archived = baseUpdatedTask.archived || shouldArchive }
 
                             updatedTasks =
                                 List.map
@@ -265,7 +291,14 @@ update msg model =
                     List.map
                         (\t ->
                             if t.id == id then
-                                { t | completed = not t.completed }
+                                let
+                                    newCompleted =
+                                        not t.completed
+
+                                    shouldArchive =
+                                        newCompleted && t.date /= "" && t.date < model.today
+                                in
+                                { t | completed = newCompleted, archived = t.archived || shouldArchive }
 
                             else
                                 t
@@ -280,6 +313,9 @@ update msg model =
                     let
                         newCompletedStatus =
                             not task.completed
+
+                        shouldArchive =
+                            newCompletedStatus && task.date /= "" && task.date < model.today
 
                         -- If the task originates from a plan, let's keep the plan synchronized!
                         -- Origin format for plan: "plano:planId:planTaskId"
@@ -354,7 +390,7 @@ update msg model =
                                     model.plans
 
                         updatedTask =
-                            { task | completed = newCompletedStatus }
+                            { task | completed = newCompletedStatus, archived = task.archived || shouldArchive }
                     in
                     ( { model | tasks = updatedTasks, plans = newPlans }
                     , Cmd.batch [ Ports.saveTask (Task.encodeTask updatedTask), planSyncCmd ]
@@ -692,7 +728,11 @@ update msg model =
                             List.map
                                 (\t ->
                                     if t.origin == ("plano:" ++ planId ++ ":" ++ planTaskId) then
-                                        { t | completed = completedStatus }
+                                        let
+                                            shouldArchive =
+                                                completedStatus && t.date /= "" && t.date < model.today
+                                        in
+                                        { t | completed = completedStatus, archived = t.archived || shouldArchive }
 
                                     else
                                         t
@@ -705,7 +745,11 @@ update msg model =
                         taskCmd =
                             case maybeTask of
                                 Just task ->
-                                    Ports.saveTask (Task.encodeTask { task | completed = completedStatus })
+                                    let
+                                        shouldArchive =
+                                            completedStatus && task.date /= "" && task.date < model.today
+                                    in
+                                    Ports.saveTask (Task.encodeTask { task | completed = completedStatus, archived = task.archived || shouldArchive })
 
                                 Nothing ->
                                     Cmd.none
