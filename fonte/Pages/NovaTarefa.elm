@@ -13,12 +13,28 @@ viewNovaTarefa model =
         config =
             case model.route of
                 Route.EditarTarefa id ->
+                    let
+                        maybeTask =
+                            model.tasks |> List.filter (\t -> t.id == id) |> List.head
+
+                        cancelHref =
+                            case maybeTask of
+                                Just task ->
+                                    if String.startsWith "plano:" task.origin then
+                                        "/planos"
+
+                                    else
+                                        "/tarefas"
+
+                                Nothing ->
+                                    "/tarefas"
+                    in
                     { pageTitle = "Editar Tarefa"
                     , pageDesc = "Edite os detalhes de sua tarefa."
                     , submitMsg = SaveEditedTask id
                     , buttonText = "Salvar"
                     , editingId = Just id
-                    , cancelHref = "/tarefas"
+                    , cancelHref = cancelHref
                     }
 
                 Route.AdicionarTarefa (Just planId) ->
