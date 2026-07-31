@@ -337,12 +337,18 @@ update msg model =
 
                                     _ ->
                                         ( model.plans, Cmd.none )
+                            redirectUrl =
+                                if String.startsWith "plano:" task.origin then
+                                    "/planos"
+
+                                else
+                                    "/tarefas"
                         in
                         ( { model | tasks = updatedTasks, plans = updatedPlans, taskTitleInput = "", taskDateInput = "" }
                         , Cmd.batch
                             [ Ports.saveTask (Task.encodeTask updatedTask)
                             , planSyncCmd
-                            , Nav.pushUrl model.key "/tarefas"
+                            , Nav.pushUrl model.key redirectUrl
                             ]
                         )
 

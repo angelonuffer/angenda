@@ -172,11 +172,19 @@ viewPlanTaskItem planId index pt =
             , span [ class "font-semibold text-slate-400" ] [ text (String.fromInt (index + 1) ++ ".") ]
             , span [ class <| "font-medium " ++ if pt.completed then "line-through text-slate-400" else "text-slate-700" ] [ text pt.title ]
             ]
-        , button
-            [ type_ "button"
-            , onClick (DeletePlanTask planId pt.id)
-            , class "text-slate-400 hover:text-rose-600 p-1 rounded-lg hover:bg-rose-50 transition-all flex items-center justify-center"
-            , title "Excluir Passo"
+        , div [ class "flex items-center gap-1" ]
+            [ a
+                [ href <| "/tarefas/editar/task_" ++ pt.id
+                , class "text-slate-400 hover:text-amber-600 p-1 rounded-lg hover:bg-amber-50 transition-all flex items-center justify-center no-underline cursor-pointer"
+                , title "Editar Tarefa"
+                ]
+                [ span [ class "material-symbols-outlined", style "font-size" "18px" ] [ text "edit" ] ]
+            , button
+                [ type_ "button"
+                , onClick (DeletePlanTask planId pt.id)
+                , class "text-slate-400 hover:text-rose-600 p-1 rounded-lg hover:bg-rose-50 transition-all flex items-center justify-center"
+                , title "Excluir Passo"
+                ]
+                [ span [ class "material-symbols-outlined", style "font-size" "18px" ] [ text "delete" ] ]
             ]
-            [ span [ class "material-symbols-outlined", style "font-size" "18px" ] [ text "delete" ] ]
         ]
