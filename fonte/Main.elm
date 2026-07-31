@@ -50,6 +50,7 @@ init today url key =
       , editingPlanId = Nothing
       , newPlanTaskTitle = ""
       , today = today
+      , drawerOpen = False
       }
     , Ports.loadData ()
     )
@@ -63,10 +64,10 @@ update msg model =
         LinkClicked urlRequest ->
             case urlRequest of
                 Browser.Internal url ->
-                    ( model, Nav.pushUrl model.key (Url.toString url) )
+                    ( { model | drawerOpen = False }, Nav.pushUrl model.key (Url.toString url) )
 
                 Browser.External href ->
-                    ( model, Nav.load href )
+                    ( { model | drawerOpen = False }, Nav.load href )
 
         UrlChanged url ->
             let
@@ -89,7 +90,7 @@ update msg model =
                         _ ->
                             ( "", "" )
             in
-            ( { model | route = newRoute, taskTitleInput = newTitleInput, taskDateInput = newDateInput }, Cmd.none )
+            ( { model | route = newRoute, taskTitleInput = newTitleInput, taskDateInput = newDateInput, drawerOpen = False }, Cmd.none )
 
         DataLoadedRaw rawValue ->
             case Decode.decodeValue Types.loadedDataDecoder rawValue of
@@ -142,6 +143,12 @@ update msg model =
 
                 Err _ ->
                     ( model, Cmd.none )
+
+        ToggleDrawer ->
+            ( { model | drawerOpen = not model.drawerOpen }, Cmd.none )
+
+        CloseDrawer ->
+            ( { model | drawerOpen = False }, Cmd.none )
 
         InputTaskTitle val ->
             ( { model | taskTitleInput = val }, Cmd.none )
@@ -821,7 +828,7 @@ view model =
     { title = "Angenda - Gerenciador de Tarefas"
     , body =
         [ div [ class "min-h-screen bg-slate-50 flex flex-col font-sans" ]
-            [ viewHeader model.route
+            [ viewHeader model
             , main_ [ class "flex-1 max-w-5xl w-full mx-auto p-4 md:p-6" ]
                 [ case model.route of
                     Tarefas ->
@@ -850,50 +857,92 @@ view model =
 
 -- HEADER & NAVIGATION
 
-viewHeader : Route -> Html Msg
-viewHeader currentRoute =
-    header [ class "bg-red-700 text-white shadow-md" ]
-        [ div [ class "max-w-5xl w-full mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-4" ]
-            [ a [ href "/tarefas", class "flex items-center gap-2 cursor-pointer text-white no-underline" ]
+viewHeader : Model -> Html Msg
+viewHeader model =
+    let
+        currentRoute =
+            model.route
+    in
+    header [ class "bg-red-700 text-white shadow-md relative z-30" ]
+        [ div [ class "max-w-5xl w-full mx-auto px-4 py-3 flex items-center gap-4" ]
+            [ button
+                [ onClick ToggleDrawer
+                , class "p-1.5 rounded-md hover:bg-red-600 focus:outline-none flex items-center justify-center text-white"
+                , title "Menu"
+                ]
+                [ span [ class "material-symbols-outlined", style "font-size" "28px" ] [ text "menu" ] ]
+            , a [ href "/tarefas", class "flex items-center gap-2 cursor-pointer text-white no-underline" ]
                 [ img [ src "/brand-icon.png", class "w-8 h-8 object-contain" ] []
                 , h1 [ class "text-2xl font-bold tracking-tight" ] [ text "Angenda" ]
                 ]
-            , nav [ class "flex items-center gap-1 bg-red-800/50 rounded-lg p-1" ]
-                [ viewNavLink "/tarefas" "playlist_add_check" "Tarefas"
-                    (case currentRoute of
-                        Tarefas ->
-                            True
-
-                        AdicionarTarefa ->
-                            True
-
-                        Route.EditarTarefa _ ->
-                            True
-
-                        _ ->
-                            False
-                    )
-                , viewNavLink "/rotinas" "repeat" "Rotinas" (currentRoute == Rotinas)
-                , viewNavLink "/planos" "schema" "Planos" (currentRoute == Planos)
-                , viewNavLink "/arquivo" "archive" "Arquivo" (currentRoute == Arquivo)
-                ]
             ]
+        , -- Backdrop overlay when drawer is open
+          if model.drawerOpen then
+            div
+                [ class "fixed inset-0 bg-slate-900/50 z-40 transition-opacity"
+                , onClick CloseDrawer
+                ]
+                []
+
+          else
+            text ""
+        , -- Lateral drawer
+          if model.drawerOpen then
+            div
+                [ class "fixed inset-y-0 left-0 w-72 bg-white z-50 shadow-2xl flex flex-col transition-all duration-300 ease-in-out" ]
+                [ -- Drawer Header
+                  div [ class "bg-red-700 text-white p-4 flex items-center justify-between shadow-sm" ]
+                    [ div [ class "flex items-center gap-2" ]
+                        [ img [ src "/brand-icon.png", class "w-8 h-8 object-contain" ] []
+                        , span [ class "text-xl font-bold tracking-tight" ] [ text "Angenda" ]
+                        ]
+                    , button
+                        [ onClick CloseDrawer
+                        , class "p-1.5 rounded-md hover:bg-red-600 focus:outline-none flex items-center justify-center text-white"
+                        , title "Fechar"
+                        ]
+                        [ span [ class "material-symbols-outlined" ] [ text "close" ] ]
+                    ]
+                , -- Drawer Body with Links
+                  nav [ class "flex-1 px-3 py-4 flex flex-col gap-1 overflow-y-auto" ]
+                    [ viewDrawerLink "/tarefas" "playlist_add_check" "Tarefas"
+                        (case currentRoute of
+                            Tarefas ->
+                                True
+
+                            AdicionarTarefa ->
+                                True
+
+                            Route.EditarTarefa _ ->
+                                True
+
+                            _ ->
+                                False
+                        )
+                    , viewDrawerLink "/planos" "schema" "Planos" (currentRoute == Planos)
+                    , viewDrawerLink "/rotinas" "repeat" "Rotinas" (currentRoute == Rotinas)
+                    , viewDrawerLink "/arquivo" "archive" "Arquivo" (currentRoute == Arquivo)
+                    ]
+                ]
+
+          else
+            text ""
         ]
 
-viewNavLink : String -> String -> String -> Bool -> Html Msg
-viewNavLink url iconName label isActive =
+viewDrawerLink : String -> String -> String -> Bool -> Html Msg
+viewDrawerLink url iconName label isActive =
     a
         [ href url
         , class <|
-            "flex items-center gap-1.5 px-2.5 sm:px-4 py-2 rounded-md font-medium text-xs sm:text-sm transition-colors "
+            "flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-sm transition-all duration-150 "
                 ++ (if isActive then
-                        "bg-white text-red-700 shadow-sm"
+                        "bg-red-50 text-red-700 font-bold border-l-4 border-amber-500 pl-3"
 
                     else
-                        "text-red-100 hover:bg-red-600/40 hover:text-white"
+                        "text-slate-600 hover:bg-slate-100 hover:text-slate-900 border-l-4 border-transparent pl-3"
                    )
         ]
-        [ span [ class "material-symbols-outlined", style "font-size" "18px" ] [ text iconName ]
+        [ span [ class "material-symbols-outlined", style "font-size" "22px" ] [ text iconName ]
         , text label
         ]
 

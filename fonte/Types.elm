@@ -26,6 +26,7 @@ type alias Model =
     , editingPlanId : Maybe String
     , newPlanTaskTitle : String
     , today : String
+    , drawerOpen : Bool
     }
 
 
@@ -33,6 +34,9 @@ type Msg
     = LinkClicked Browser.UrlRequest
     | UrlChanged Url
     | DataLoadedRaw Decode.Value
+    -- Drawer Actions
+    | ToggleDrawer
+    | CloseDrawer
     -- Form Inputs
     | InputTaskTitle String
     | InputTaskDate String
