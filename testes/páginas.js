@@ -101,6 +101,34 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
   await page.click('button[title="Arquivar Tarefa"]');
   await page.waitForTimeout(500);
 
+  // Step 6: Verify drawer open/close and menu navigation works
+  console.log('Verifying drawer toggling and navigation...');
+  await page.goto('/tarefas');
+  await page.waitForSelector('button[title="Menu"]');
+  // Click Menu button to open the drawer
+  await page.click('button[title="Menu"]');
+  await page.waitForSelector('nav a:has-text("Planos")');
+
+  // Let's click Planos from the drawer to navigate!
+  await page.click('nav a:has-text("Planos")');
+  await page.waitForURL('**/planos');
+  console.log('Navigation via drawer successful!');
+
+  // Take a screenshot of the open drawer on mobile viewport as well
+  await page.goto('/tarefas');
+  await page.click('button[title="Menu"]');
+  await page.waitForSelector('button[title="Fechar"]');
+  await page.setViewportSize(viewports.vertical);
+  await page.waitForTimeout(200);
+  const drawerDir = path.join(__dirname, 'páginas', 'tarefas');
+  if (!fs.existsSync(drawerDir)) {
+    fs.mkdirSync(drawerDir, { recursive: true });
+  }
+  await page.screenshot({ path: path.join(drawerDir, 'drawer-vertical.png') });
+  console.log('Saved drawer-vertical.png');
+  // Close the drawer
+  await page.click('button[title="Fechar"]');
+
   // Now take the screenshots for each route and layout!
   const routes = [
     'tarefas',
