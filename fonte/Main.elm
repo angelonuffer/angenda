@@ -47,6 +47,7 @@ init today url key =
       , routineRecurrenceInput = "Diária"
       , planTitleInput = ""
       , planDescInput = ""
+      , planDeadlineInput = ""
       , editingPlanId = Nothing
       , newPlanTaskTitle = ""
       , today = today
@@ -90,10 +91,10 @@ update msg model =
                         _ ->
                             ( "", "" )
 
-                ( newPlanTitleInput, newPlanDescInput ) =
+                ( newPlanTitleInput, newPlanDescInput, newPlanDeadlineInput ) =
                     case newRoute of
                         AdicionarPlano ->
-                            ( model.planTitleInput, model.planDescInput )
+                            ( model.planTitleInput, model.planDescInput, model.planDeadlineInput )
 
                         EditarPlano planId ->
                             let
@@ -104,10 +105,11 @@ update msg model =
                             in
                             ( maybePlan |> Maybe.map .title |> Maybe.withDefault ""
                             , maybePlan |> Maybe.map .description |> Maybe.withDefault ""
+                            , maybePlan |> Maybe.map .deadline |> Maybe.withDefault ""
                             )
 
                         _ ->
-                            ( "", "" )
+                            ( "", "", "" )
             in
             ( { model
                 | route = newRoute
@@ -115,6 +117,7 @@ update msg model =
                 , taskDateInput = newDateInput
                 , planTitleInput = newPlanTitleInput
                 , planDescInput = newPlanDescInput
+                , planDeadlineInput = newPlanDeadlineInput
                 , drawerOpen = False
               }
             , Cmd.none
@@ -140,7 +143,7 @@ update msg model =
                                 _ ->
                                     ( model.taskTitleInput, model.taskDateInput )
 
-                        ( newPlanTitleInput, newPlanDescInput ) =
+                        ( newPlanTitleInput, newPlanDescInput, newPlanDeadlineInput ) =
                             case model.route of
                                 Route.EditarPlano planId ->
                                     let
@@ -151,10 +154,11 @@ update msg model =
                                     in
                                     ( maybePlan |> Maybe.map .title |> Maybe.withDefault model.planTitleInput
                                     , maybePlan |> Maybe.map .description |> Maybe.withDefault model.planDescInput
+                                    , maybePlan |> Maybe.map .deadline |> Maybe.withDefault model.planDeadlineInput
                                     )
 
                                 _ ->
-                                    ( model.planTitleInput, model.planDescInput )
+                                    ( model.planTitleInput, model.planDescInput, model.planDeadlineInput )
 
                         -- Automatic archiving of completed past tasks on load
                         tasksToArchive =
@@ -183,6 +187,7 @@ update msg model =
                         , taskDateInput = newDateInput
                         , planTitleInput = newPlanTitleInput
                         , planDescInput = newPlanDescInput
+                        , planDeadlineInput = newPlanDeadlineInput
                       }
                     , archiveCmds
                     )
@@ -213,6 +218,9 @@ update msg model =
 
         InputPlanDesc val ->
             ( { model | planDescInput = val }, Cmd.none )
+
+        InputPlanDeadline val ->
+            ( { model | planDeadlineInput = val }, Cmd.none )
 
         InputPlanTaskTitle val ->
             ( { model | newPlanTaskTitle = val }, Cmd.none )
@@ -710,12 +718,14 @@ update msg model =
                         , description = model.planDescInput
                         , tasks = []
                         , archived = False
+                        , deadline = model.planDeadlineInput
                         }
                 in
                 ( { model
                     | plans = model.plans ++ [ newPlan ]
                     , planTitleInput = ""
                     , planDescInput = ""
+                    , planDeadlineInput = ""
                   }
                 , Cmd.batch
                     [ Ports.savePlan (Plan.encodePlan newPlan)
@@ -736,7 +746,7 @@ update msg model =
                     Just plan ->
                         let
                             updatedPlan =
-                                { plan | title = String.trim model.planTitleInput, description = model.planDescInput }
+                                { plan | title = String.trim model.planTitleInput, description = model.planDescInput, deadline = model.planDeadlineInput }
 
                             updatedPlans =
                                 List.map
@@ -753,6 +763,7 @@ update msg model =
                             | plans = updatedPlans
                             , planTitleInput = ""
                             , planDescInput = ""
+                            , planDeadlineInput = ""
                           }
                         , Cmd.batch
                             [ Ports.savePlan (Plan.encodePlan updatedPlan)
