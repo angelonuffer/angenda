@@ -148,11 +148,25 @@
             const day = String(now.getDate()).padStart(2, '0');
             const todayStr = `${year}-${month}-${day}`;
 
+
             // Browser.application needs a flags argument, and returns { ports } if they are declared in Main.elm
             const app = Elm.Main.init({
                 node: document.getElementById('elm-app'),
                 flags: todayStr
             });
+
+
+            // Handle requestUUID command
+            if (app.ports.requestUUID) {
+                app.ports.requestUUID.subscribe((data) => {
+                    // Inject a standard v4 UUID using crypto
+                    const uuid = crypto.randomUUID();
+                    const response = { ...data, uuid: uuid };
+                    if (app.ports.receiveUUID) {
+                        app.ports.receiveUUID.send(response);
+                    }
+                });
+            }
 
             // Handle loadData command
             if (app.ports.loadData) {

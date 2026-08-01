@@ -35,6 +35,7 @@ type Msg
     = LinkClicked Browser.UrlRequest
     | UrlChanged Url
     | DataLoadedRaw Decode.Value
+    | ReceiveUUID Decode.Value
     -- Drawer Actions
     | ToggleDrawer
     | CloseDrawer

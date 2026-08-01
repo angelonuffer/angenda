@@ -7,6 +7,22 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
   page.on('console', msg => console.log('PAGE LOG:', msg.text()));
   page.on('pageerror', err => console.error('PAGE ERROR:', err.stack || err.message));
 
+
+  // Inject deterministic UUID generation for tests
+  await page.addInitScript(() => {
+    let mockCounter = 0;
+    const _originalCrypto = window.crypto;
+    Object.defineProperty(window, 'crypto', {
+      value: {
+        ..._originalCrypto,
+        randomUUID: () => {
+          mockCounter++;
+          return `mock-uuid-${mockCounter}`;
+        }
+      }
+    });
+  });
+
   // Viewports configurations
   const viewports = {
     horizontal: { width: 1280, height: 800 },

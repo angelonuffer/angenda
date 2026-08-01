@@ -9,6 +9,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Json.Decode as Decode
+import Json.Encode as Encode
 import Pages.Arquivo exposing (viewArquivo)
 import Pages.NovaTarefa exposing (viewNovaTarefa)
 import Pages.Planos exposing (viewPlanos, viewNovoPlano, viewEditarPlano)
@@ -662,19 +663,14 @@ update msg model =
                 ( model, Cmd.none )
 
             else
-                let
-                    newId =
-                        "routine_" ++ String.fromInt (List.length model.routines) ++ "_" ++ model.routineTitleInput
-                        |> String.replace " " "_"
-
-                    newRoutine =
-                        { id = newId
-                        , title = model.routineTitleInput
-                        , recurrence = model.routineRecurrenceInput
-                        }
-                in
-                ( { model | routines = model.routines ++ [ newRoutine ], routineTitleInput = "" }
-                , Ports.saveRoutine (Routine.encodeRoutine newRoutine)
+                ( model
+                , Ports.requestUUID
+                    (Encode.object
+                        [ ( "action", Encode.string "CreateRoutine" )
+                        , ( "title", Encode.string model.routineTitleInput )
+                        , ( "recurrence", Encode.string model.routineRecurrenceInput )
+                        ]
+                    )
                 )
 
         DeleteRoutineAction id ->
@@ -861,67 +857,246 @@ update msg model =
         StartEditPlan id ->
             ( { model | editingPlanId = Just id, newPlanTaskTitle = "" }, Cmd.none )
 
-        StopEditPlan ->
-            ( { model | editingPlanId = Nothing, newPlanTaskTitle = "" }, Cmd.none )
+        ReceiveUUID raw ->
+            let
+                actionStr =
+                    Decode.decodeValue (Decode.field "action" Decode.string) raw |> Result.withDefault ""
+
+                uuid =
+                    Decode.decodeValue (Decode.field "uuid" Decode.string) raw |> Result.withDefault ""
+            in
+            if uuid == "" then
+                ( model, Cmd.none )
+            else
+                case actionStr of
+                    "CreateTask_Avulsa" ->
+                        let
+                            title = Decode.decodeValue (Decode.field "title" Decode.string) raw |> Result.withDefault ""
+                            date = Decode.decodeValue (Decode.field "date" Decode.string) raw |> Result.withDefault ""
+
+                            newTask =
+                                { id = uuid
+                                , title = title
+                                , completed = False
+                                , origin = "avulsa"
+                                , createdAt = "Agora"
+                                , history = []
+                                , archived = False
+                                , date = date
+                                }
+                        in
+                        ( { model | tasks = model.tasks ++ [ newTask ], taskTitleInput = "", taskDateInput = "" }
+                        , Cmd.batch
+                            [ Ports.saveTask (Task.encodeTask newTask)
+                            , Nav.pushUrl model.key "/tarefas"
+                            ]
+                        )
+
+                    "CreateTask_Plan" ->
+                        let
+                            planId = Decode.decodeValue (Decode.field "planId" Decode.string) raw |> Result.withDefault ""
+                            title = Decode.decodeValue (Decode.field "title" Decode.string) raw |> Result.withDefault ""
+                            date = Decode.decodeValue (Decode.field "date" Decode.string) raw |> Result.withDefault ""
+
+                            taskId = uuid
+
+                            newPlanTask =
+                                { id = taskId
+                                , title = title
+                                , completed = False
+                                }
+
+                            updatedPlans =
+                                List.map
+                                    (\p ->
+                                        if p.id == planId then
+                                            { p | tasks = p.tasks ++ [ newPlanTask ] }
+                                        else
+                                            p
+                                    )
+                                    model.plans
+
+                            plan =
+                                List.filter (\p -> p.id == planId) updatedPlans |> List.head
+
+                            newTask =
+                                { id = "task_" ++ taskId
+                                , title = title
+                                , completed = False
+                                , origin = "plano:" ++ planId ++ ":" ++ taskId
+                                , createdAt = "Agora"
+                                , history = []
+                                , archived = False
+                                , date = date
+                                }
+                        in
+                        ( { model | plans = updatedPlans
+                          , tasks = model.tasks ++ [ newTask ]
+                          , taskTitleInput = ""
+                          , taskDateInput = ""
+                          }
+                        , Cmd.batch
+                            [ case plan of
+                                Just p ->
+                                    Ports.savePlan (Plan.encodePlan p)
+
+                                Nothing ->
+                                    Cmd.none
+                            , Ports.saveTask (Task.encodeTask newTask)
+                            , Nav.pushUrl model.key ("/planos/editar/" ++ planId)
+                            ]
+                        )
+
+                    "CreateRoutine" ->
+                        let
+                            title = Decode.decodeValue (Decode.field "title" Decode.string) raw |> Result.withDefault ""
+                            recurrence = Decode.decodeValue (Decode.field "recurrence" Decode.string) raw |> Result.withDefault ""
+
+                            newRoutine =
+                                { id = uuid
+                                , title = title
+                                , recurrence = recurrence
+                                , lastGeneratedDate = model.today
+                                }
+                        in
+                        ( { model | routines = model.routines ++ [ newRoutine ], routineTitleInput = "" }
+                        , Ports.saveRoutine (Routine.encodeRoutine newRoutine)
+                        )
+
+                    "GenerateTaskFromRoutine" ->
+                        let
+                            routineId = Decode.decodeValue (Decode.field "routineId" Decode.string) raw |> Result.withDefault ""
+                            routineTitle = Decode.decodeValue (Decode.field "routineTitle" Decode.string) raw |> Result.withDefault ""
+
+                            newTask =
+                                { id = uuid
+                                , title = routineTitle
+                                , completed = False
+                                , origin = "rotina:" ++ routineId
+                                , createdAt = "Agora"
+                                , history = []
+                                , archived = False
+                                , date = model.today
+                                }
+
+                            updatedRoutines =
+                                List.map
+                                    (\r ->
+                                        if r.id == routineId then
+                                            { r | lastGeneratedDate = model.today }
+                                        else
+                                            r
+                                    )
+                                    model.routines
+
+                            routine =
+                                List.filter (\r -> r.id == routineId) updatedRoutines |> List.head
+                        in
+                        ( { model | tasks = model.tasks ++ [ newTask ], routines = updatedRoutines }
+                        , Cmd.batch
+                            [ Ports.saveTask (Task.encodeTask newTask)
+                            , case routine of
+                                Just r ->
+                                    Ports.saveRoutine (Routine.encodeRoutine r)
+
+                                Nothing ->
+                                    Cmd.none
+                            ]
+                        )
+
+                    "CreatePlan" ->
+                        let
+                            title = Decode.decodeValue (Decode.field "title" Decode.string) raw |> Result.withDefault ""
+                            desc = Decode.decodeValue (Decode.field "desc" Decode.string) raw |> Result.withDefault ""
+                            deadline = Decode.decodeValue (Decode.field "deadline" Decode.string) raw |> Result.withDefault ""
+
+                            newPlan =
+                                { id = uuid
+                                , title = title
+                                , description = desc
+                                , deadline = deadline
+                                , tasks = []
+                                , archived = False
+                                }
+                        in
+                        ( { model | plans = model.plans ++ [ newPlan ], planTitleInput = "", planDescInput = "", planDeadlineInput = "" }
+                        , Cmd.batch
+                            [ Ports.savePlan (Plan.encodePlan newPlan)
+                            , Nav.pushUrl model.key "/planos"
+                            ]
+                        )
+
+                    "AddPlanTask" ->
+                        let
+                            planId = Decode.decodeValue (Decode.field "planId" Decode.string) raw |> Result.withDefault ""
+                            title = Decode.decodeValue (Decode.field "title" Decode.string) raw |> Result.withDefault ""
+
+                            taskId = uuid
+
+                            newPlanTask =
+                                { id = taskId
+                                , title = title
+                                , completed = False
+                                }
+
+                            updatedPlans =
+                                List.map
+                                    (\p ->
+                                        if p.id == planId then
+                                            { p | tasks = p.tasks ++ [ newPlanTask ] }
+                                        else
+                                            p
+                                    )
+                                    model.plans
+
+                            plan =
+                                List.filter (\p -> p.id == planId) updatedPlans |> List.head
+
+                            newTask =
+                                { id = "task_" ++ taskId
+                                , title = title
+                                , completed = False
+                                , origin = "plano:" ++ planId ++ ":" ++ taskId
+                                , createdAt = "Agora"
+                                , history = []
+                                , archived = False
+                                , date = ""
+                                }
+                        in
+                        ( { model | plans = updatedPlans, tasks = model.tasks ++ [ newTask ], newPlanTaskTitle = "" }
+                        , Cmd.batch
+                            [ case plan of
+                                Just p ->
+                                    Ports.savePlan (Plan.encodePlan p)
+
+                                Nothing ->
+                                    Cmd.none
+                            , Ports.saveTask (Task.encodeTask newTask)
+                            ]
+                        )
+
+                    _ ->
+                        ( model, Cmd.none )
 
         AddPlanTask planId ->
             if String.trim model.newPlanTaskTitle == "" then
                 ( model, Cmd.none )
 
             else
-                let
-                    taskId =
-                        "plantask_" ++ planId ++ "_" ++ String.fromInt (List.length model.tasks)
+                ( model
+                , Ports.requestUUID
+                    (Encode.object
+                        [ ( "action", Encode.string "AddPlanTask" )
+                        , ( "planId", Encode.string planId )
+                        , ( "title", Encode.string model.newPlanTaskTitle )
+                        ]
+                    )
+                )
 
-                    newPlanTask =
-                        { id = taskId
-                        , title = model.newPlanTaskTitle
-                        , completed = False
-                        }
+        StopEditPlan ->
+            ( { model | editingPlanId = Nothing, newPlanTaskTitle = "" }, Cmd.none )
 
-                    -- Update plan
-                    updatedPlans =
-                        List.map
-                            (\p ->
-                                if p.id == planId then
-                                    { p | tasks = p.tasks ++ [ newPlanTask ] }
 
-                                else
-                                    p
-                            )
-                            model.plans
-
-                    maybePlan =
-                        List.filter (\p -> p.id == planId) updatedPlans |> List.head
-                in
-                case maybePlan of
-                    Just plan ->
-                        -- Mirror to main tasks list as well
-                        let
-                            newTask =
-                                { id = "task_" ++ taskId
-                                , title = model.newPlanTaskTitle
-                                , completed = False
-                                , origin = "plano:" ++ planId ++ ":" ++ taskId
-                                , createdAt = "Plano: " ++ plan.title
-                                , history = []
-                                , archived = False
-                                , date = ""
-                                }
-                        in
-                        ( { model
-                            | plans = updatedPlans
-                            , tasks = model.tasks ++ [ newTask ]
-                            , newPlanTaskTitle = ""
-                          }
-                        , Cmd.batch
-                            [ Ports.savePlan (Plan.encodePlan plan)
-                            , Ports.saveTask (Task.encodeTask newTask)
-                            ]
-                        )
-
-                    Nothing ->
-                        ( model, Cmd.none )
 
         TogglePlanTask planId planTaskId ->
             let
@@ -1030,7 +1205,7 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Ports.dataLoaded DataLoadedRaw
+    Sub.batch [ Ports.dataLoaded DataLoadedRaw, Ports.receiveUUID ReceiveUUID ]
 
 
 -- VIEW
