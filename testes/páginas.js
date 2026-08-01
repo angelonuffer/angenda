@@ -65,6 +65,8 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
   // Edit the newly created plan
   await page.click('a:has-text("Editar")');
   await page.waitForSelector('#add-plan-task-btn');
+  const planEditPath = new URL(page.url()).pathname.substring(1);
+  console.log('Captured planEditPath:', planEditPath);
 
   // Step 3a: Add first plan task via the new page
   await page.click('#add-plan-task-btn');
@@ -104,6 +106,8 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
   await page.waitForSelector('a[title="Editar Tarefa"]', { timeout: 10000 });
   await page.click('a[title="Editar Tarefa"]');
   await page.waitForSelector('#new-task-title', { timeout: 10000 });
+  const taskEditPath = new URL(page.url()).pathname.substring(1);
+  console.log('Captured taskEditPath:', taskEditPath);
   await page.fill('#new-task-title', 'Comprar mantimentos para a semana inteira');
   await page.click('button[type="submit"]');
   await page.waitForTimeout(500);
@@ -143,11 +147,11 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
   const routes = [
     'tarefas',
     'tarefas/nova',
-    'tarefas/editar/task_0_Comprar_mantimentos_para_a_semana',
+    taskEditPath,
     'rotinas',
     'planos',
     'planos/novo',
-    'planos/editar/plan_0_Lançar_novo_website_pessoal',
+    planEditPath,
     'arquivo'
   ];
 

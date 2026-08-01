@@ -27,6 +27,8 @@ type alias Model =
     , newPlanTaskTitle : String
     , today : String
     , drawerOpen : Bool
+    , seed : Int
+    , counter : Int
     }
 
 

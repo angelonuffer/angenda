@@ -151,7 +151,10 @@
             // Browser.application needs a flags argument, and returns { ports } if they are declared in Main.elm
             const app = Elm.Main.init({
                 node: document.getElementById('elm-app'),
-                flags: todayStr
+                flags: {
+                    today: todayStr,
+                    seed: Math.floor(Math.random() * 2147483647)
+                }
             });
 
             // Handle loadData command

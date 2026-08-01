@@ -22,7 +22,13 @@ import Url exposing (Url)
 
 -- MAIN
 
-main : Program String Model Msg
+type alias Flags =
+    { today : String
+    , seed : Int
+    }
+
+
+main : Program Flags Model Msg
 main =
     Browser.application
         { init = init
@@ -34,8 +40,8 @@ main =
         }
 
 
-init : String -> Url -> Nav.Key -> ( Model, Cmd Msg )
-init today url key =
+init : Flags -> Url -> Nav.Key -> ( Model, Cmd Msg )
+init flags url key =
     ( { key = key
       , route = Route.fromUrl url
       , tasks = []
@@ -49,8 +55,10 @@ init today url key =
       , planDescInput = ""
       , editingPlanId = Nothing
       , newPlanTaskTitle = ""
-      , today = today
+      , today = flags.today
       , drawerOpen = False
+      , seed = flags.seed
+      , counter = 1
       }
     , Ports.loadData ()
     )
@@ -225,8 +233,8 @@ update msg model =
                 case model.route of
                     Route.AdicionarTarefa (Just planId) ->
                         let
-                            taskId =
-                                "plantask_" ++ planId ++ "_" ++ String.fromInt (List.length model.tasks)
+                            ( taskId, nextSeed ) =
+                                generateUuid model.counter model.seed
 
                             newPlanTask =
                                 { id = taskId
@@ -267,6 +275,8 @@ update msg model =
                                     , tasks = model.tasks ++ [ newTask ]
                                     , taskTitleInput = ""
                                     , taskDateInput = ""
+                                    , seed = nextSeed
+                                    , counter = model.counter + 1
                                   }
                                 , Cmd.batch
                                     [ Ports.savePlan (Plan.encodePlan plan)
@@ -280,23 +290,21 @@ update msg model =
 
                     _ ->
                         let
-                            newId =
-                                "task_" ++ String.fromInt (List.length model.tasks) ++ "_" ++ model.taskTitleInput
-                                |> String.replace " " "_"
+                            ( uuid, nextSeed ) =
+                                generateUuid model.counter model.seed
 
                             newTask =
-                                { id = newId
+                                { id = uuid
                                 , title = model.taskTitleInput
                                 , completed = False
                                 , origin = "avulsa"
                                 , createdAt = "Agora"
-                                {-- Simple unique key, indexdb or JS will keep it safe, but we can make a pseudo-random or simple timestamp id --}
                                 , history = []
                                 , archived = False
                                 , date = model.taskDateInput
                                 }
                         in
-                        ( { model | tasks = model.tasks ++ [ newTask ], taskTitleInput = "", taskDateInput = "" }
+                        ( { model | tasks = model.tasks ++ [ newTask ], taskTitleInput = "", taskDateInput = "", seed = nextSeed, counter = model.counter + 1 }
                         , Cmd.batch
                             [ Ports.saveTask (Task.encodeTask newTask)
                             , Nav.pushUrl model.key "/tarefas"
@@ -655,17 +663,16 @@ update msg model =
 
             else
                 let
-                    newId =
-                        "routine_" ++ String.fromInt (List.length model.routines) ++ "_" ++ model.routineTitleInput
-                        |> String.replace " " "_"
+                    ( uuid, nextSeed ) =
+                        generateUuid model.counter model.seed
 
                     newRoutine =
-                        { id = newId
+                        { id = uuid
                         , title = model.routineTitleInput
                         , recurrence = model.routineRecurrenceInput
                         }
                 in
-                ( { model | routines = model.routines ++ [ newRoutine ], routineTitleInput = "" }
+                ( { model | routines = model.routines ++ [ newRoutine ], routineTitleInput = "", seed = nextSeed, counter = model.counter + 1 }
                 , Ports.saveRoutine (Routine.encodeRoutine newRoutine)
                 )
 
@@ -676,11 +683,11 @@ update msg model =
 
         GenerateTaskFromRoutine routine ->
             let
-                newTaskId =
-                    "task_routine_" ++ routine.id ++ "_" ++ String.fromInt (List.length model.tasks)
+                ( uuid, nextSeed ) =
+                    generateUuid model.counter model.seed
 
                 newTask =
-                    { id = newTaskId
+                    { id = uuid
                     , title = routine.title
                     , completed = False
                     , origin = "rotina:" ++ routine.title
@@ -690,7 +697,7 @@ update msg model =
                     , date = ""
                     }
             in
-            ( { model | tasks = model.tasks ++ [ newTask ] }
+            ( { model | tasks = model.tasks ++ [ newTask ], seed = nextSeed, counter = model.counter + 1 }
             , Ports.saveTask (Task.encodeTask newTask)
             )
 
@@ -700,12 +707,11 @@ update msg model =
 
             else
                 let
-                    newId =
-                        "plan_" ++ String.fromInt (List.length model.plans) ++ "_" ++ model.planTitleInput
-                        |> String.replace " " "_"
+                    ( uuid, nextSeed ) =
+                        generateUuid model.counter model.seed
 
                     newPlan =
-                        { id = newId
+                        { id = uuid
                         , title = model.planTitleInput
                         , description = model.planDescInput
                         , tasks = []
@@ -716,6 +722,8 @@ update msg model =
                     | plans = model.plans ++ [ newPlan ]
                     , planTitleInput = ""
                     , planDescInput = ""
+                    , seed = nextSeed
+                    , counter = model.counter + 1
                   }
                 , Cmd.batch
                     [ Ports.savePlan (Plan.encodePlan newPlan)
@@ -859,8 +867,8 @@ update msg model =
 
             else
                 let
-                    taskId =
-                        "plantask_" ++ planId ++ "_" ++ String.fromInt (List.length model.tasks)
+                    ( taskId, nextSeed ) =
+                        generateUuid model.counter model.seed
 
                     newPlanTask =
                         { id = taskId
@@ -902,6 +910,8 @@ update msg model =
                             | plans = updatedPlans
                             , tasks = model.tasks ++ [ newTask ]
                             , newPlanTaskTitle = ""
+                            , seed = nextSeed
+                            , counter = model.counter + 1
                           }
                         , Cmd.batch
                             [ Ports.savePlan (Plan.encodePlan plan)
@@ -1220,3 +1230,106 @@ viewFooter =
         [ p [] [ text "Angenda © 2025 - Gerenciamento Inteligente de Tarefas" ]
         , p [ class "mt-1 text-xs" ] [ text "Desenvolvido em Elm, Tailwind CSS e IndexedDB" ]
         ]
+
+
+-- UUID GENERATOR
+
+toHex : Int -> String
+toHex n =
+    case n of
+        0 -> "0"
+        1 -> "1"
+        2 -> "2"
+        3 -> "3"
+        4 -> "4"
+        5 -> "5"
+        6 -> "6"
+        7 -> "7"
+        8 -> "8"
+        9 -> "9"
+        10 -> "a"
+        11 -> "b"
+        12 -> "c"
+        13 -> "d"
+        14 -> "e"
+        15 -> "f"
+        _ -> "0"
+
+
+toYHex : Int -> String
+toYHex n =
+    case n of
+        0 -> "8"
+        1 -> "9"
+        2 -> "a"
+        3 -> "b"
+        _ -> "8"
+
+
+nextRandom : Int -> ( Int, Int )
+nextRandom seed =
+    let
+        a = 1103515245
+        c = 12345
+        m = 2147483647
+        nextSeed = (a * seed + c) |> modBy m
+    in
+    ( nextSeed, nextSeed )
+
+
+nextRandomVal : Int -> Int -> Int -> ( Int, Int )
+nextRandomVal minVal maxVal seed =
+    let
+        ( r, nextSeed ) = nextRandom seed
+        range = maxVal - minVal + 1
+        val = minVal + (r |> modBy range)
+    in
+    ( val, nextSeed )
+
+
+to8DigitHex : Int -> String
+to8DigitHex n =
+    let
+        h1 = n |> modBy 16 |> toHex
+        h2 = (n // 16) |> modBy 16 |> toHex
+        h3 = (n // 256) |> modBy 16 |> toHex
+        h4 = (n // 4096) |> modBy 16 |> toHex
+        h5 = (n // 65536) |> modBy 16 |> toHex
+        h6 = (n // 1048576) |> modBy 16 |> toHex
+        h7 = (n // 16777216) |> modBy 16 |> toHex
+        h8 = (n // 268435456) |> modBy 16 |> toHex
+    in
+    h8 ++ h7 ++ h6 ++ h5 ++ h4 ++ h3 ++ h2 ++ h1
+
+
+generateUuid : Int -> Int -> ( String, Int )
+generateUuid counter seed0 =
+    let
+        h1 = to8DigitHex counter
+        ( h2, seed2 ) = nextRandomHexList 4 seed0
+        ( h3, seed3 ) = nextRandomHexList 3 seed2
+        ( yVal, seed4 ) = nextRandomVal 0 3 seed3
+        yChar = toYHex yVal
+        ( h4, seed5 ) = nextRandomHexList 3 seed4
+        ( h5, seed6 ) = nextRandomHexList 12 seed5
+    in
+    ( h1 ++ "-" ++ h2 ++ "-4" ++ h3 ++ "-" ++ yChar ++ h4 ++ "-" ++ h5
+    , seed6
+    )
+
+
+nextRandomHexList : Int -> Int -> ( String, Int )
+nextRandomHexList count seed =
+    nextRandomHexListHelper count "" seed
+
+
+nextRandomHexListHelper : Int -> String -> Int -> ( String, Int )
+nextRandomHexListHelper count acc seed =
+    if count <= 0 then
+        ( acc, seed )
+    else
+        let
+            ( val, nextSeed ) = nextRandomVal 0 15 seed
+            hexChar = toHex val
+        in
+        nextRandomHexListHelper (count - 1) (acc ++ hexChar) nextSeed
