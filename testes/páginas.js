@@ -117,6 +117,7 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
 
   // Step 6: Verify drawer open/close and menu navigation works
   console.log('Verifying drawer toggling and navigation...');
+  await page.setViewportSize(viewports.vertical);
   await page.goto('/tarefas');
   await page.waitForSelector('button[title="Menu"]');
   // Click Menu button to open the drawer
@@ -132,7 +133,6 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
   await page.goto('/tarefas');
   await page.click('button[title="Menu"]');
   await page.waitForSelector('button[title="Fechar"]');
-  await page.setViewportSize(viewports.vertical);
   await page.waitForTimeout(200);
   await expect(page).toHaveScreenshot(['tarefas', 'drawer-vertical.png']);
   console.log('Asserted drawer-vertical.png');
