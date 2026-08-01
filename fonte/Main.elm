@@ -912,33 +912,75 @@ view model =
     , body =
         [ div [ class "min-h-screen bg-slate-50 flex flex-col font-sans" ]
             [ viewHeader model
-            , main_ [ class "flex-1 max-w-5xl w-full mx-auto p-4 md:p-6" ]
-                [ case model.route of
-                    Tarefas ->
-                        viewTarefas model
+            , div [ class "flex-1 max-w-5xl w-full mx-auto flex flex-col md:flex-row" ]
+                [ viewSidebar model
+                , main_ [ class "flex-1 p-4 md:p-6 overflow-x-hidden" ]
+                    [ case model.route of
+                        Tarefas ->
+                            viewTarefas model
 
-                    AdicionarTarefa _ ->
-                        viewNovaTarefa model
+                        AdicionarTarefa _ ->
+                            viewNovaTarefa model
 
-                    Route.EditarTarefa _ ->
-                        viewNovaTarefa model
+                        Route.EditarTarefa _ ->
+                            viewNovaTarefa model
 
-                    Rotinas ->
-                        viewRotinas model
+                        Rotinas ->
+                            viewRotinas model
 
-                    Planos ->
-                        viewPlanos model
+                        Planos ->
+                            viewPlanos model
 
-                    AdicionarPlano ->
-                        viewNovoPlano model
+                        AdicionarPlano ->
+                            viewNovoPlano model
 
-                    Arquivo ->
-                        viewArquivo model
+                        Arquivo ->
+                            viewArquivo model
+                    ]
                 ]
             , viewFooter
             ]
         ]
     }
+
+
+-- SIDEBAR FOR DESKTOP
+
+viewSidebar : Model -> Html Msg
+viewSidebar model =
+    let
+        currentRoute =
+            model.route
+    in
+    aside [ class "hidden md:flex flex-col w-60 bg-white border-r border-slate-200 py-6 px-3 gap-1 flex-shrink-0" ]
+        [ viewDrawerLink "/tarefas" "playlist_add_check" "Tarefas"
+            (case currentRoute of
+                Tarefas ->
+                    True
+
+                AdicionarTarefa _ ->
+                    True
+
+                Route.EditarTarefa _ ->
+                    True
+
+                _ ->
+                    False
+            )
+        , viewDrawerLink "/planos" "schema" "Planos"
+            (case currentRoute of
+                Planos ->
+                    True
+
+                AdicionarPlano ->
+                    True
+
+                _ ->
+                    False
+            )
+        , viewDrawerLink "/rotinas" "repeat" "Rotinas" (currentRoute == Rotinas)
+        , viewDrawerLink "/arquivo" "archive" "Arquivo" (currentRoute == Arquivo)
+        ]
 
 
 -- HEADER & NAVIGATION
@@ -953,7 +995,7 @@ viewHeader model =
         [ div [ class "max-w-5xl w-full mx-auto px-4 py-3 flex items-center gap-4" ]
             [ button
                 [ onClick ToggleDrawer
-                , class "p-1.5 rounded-md hover:bg-red-600 focus:outline-none flex items-center justify-center text-white"
+                , class "p-1.5 rounded-md hover:bg-red-600 focus:outline-none flex items-center justify-center text-white md:hidden"
                 , title "Menu"
                 ]
                 [ span [ class "material-symbols-outlined", style "font-size" "28px" ] [ text "menu" ] ]
@@ -965,7 +1007,7 @@ viewHeader model =
         , -- Backdrop overlay when drawer is open
           if model.drawerOpen then
             div
-                [ class "fixed inset-0 bg-slate-900/50 z-40 transition-opacity"
+                [ class "fixed inset-0 bg-slate-900/50 z-40 transition-opacity md:hidden"
                 , onClick CloseDrawer
                 ]
                 []
@@ -975,7 +1017,7 @@ viewHeader model =
         , -- Lateral drawer
           if model.drawerOpen then
             div
-                [ class "fixed inset-y-0 left-0 w-72 bg-white z-50 shadow-2xl flex flex-col transition-all duration-300 ease-in-out" ]
+                [ class "fixed inset-y-0 left-0 w-72 bg-white z-50 shadow-2xl flex flex-col transition-all duration-300 ease-in-out md:hidden" ]
                 [ -- Drawer Header
                   div [ class "bg-red-700 text-white p-4 flex items-center justify-between shadow-sm" ]
                     [ div [ class "flex items-center gap-2" ]
