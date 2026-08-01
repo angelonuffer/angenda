@@ -107,11 +107,14 @@ viewNovoPlano model =
 viewPlanItem : Model -> Plan -> Html Msg
 viewPlanItem model plan =
     let
+        activePlanTasks =
+            List.filter (\pt -> not (isPlanTaskArchived model plan.id pt.id)) plan.tasks
+
         totalTasks =
-            List.length plan.tasks
+            List.length activePlanTasks
 
         completedTasks =
-            List.filter .completed plan.tasks |> List.length
+            List.filter .completed activePlanTasks |> List.length
 
         progressPercent =
             if totalTasks == 0 then
@@ -222,12 +225,16 @@ viewEditarPlano model planId =
                             ]
                         ]
                     , -- List of current plan tasks
-                      if List.isEmpty plan.tasks then
+                      let
+                          activeTasks =
+                              List.filter (\pt -> not (isPlanTaskArchived model plan.id pt.id)) plan.tasks
+                      in
+                      if List.isEmpty activeTasks then
                         p [ class "text-sm text-slate-400 italic text-center py-4" ] [ text "Sem tarefas adicionadas a este plano. Adicione tarefas para iniciar a sequência!" ]
 
                       else
                         ol [ class "divide-y divide-slate-100 border border-slate-100 rounded-lg overflow-hidden bg-slate-50/20" ]
-                            (List.indexedMap (viewPlanTaskItem plan.id) plan.tasks)
+                            (List.indexedMap (viewPlanTaskItem plan.id) activeTasks)
                     ]
                 ]
 
@@ -271,10 +278,19 @@ viewPlanTaskItem planId index pt =
                 [ span [ class "material-symbols-outlined", style "font-size" "18px" ] [ text "edit" ] ]
             , button
                 [ type_ "button"
-                , onClick (DeletePlanTask planId pt.id)
-                , class "text-slate-400 hover:text-rose-600 p-1 rounded-lg hover:bg-rose-50 transition-all flex items-center justify-center"
-                , title "Excluir Passo"
+                , onClick (ArchivePlanTask planId pt.id)
+                , class "text-slate-400 hover:text-amber-600 p-1 rounded-lg hover:bg-amber-50 transition-all flex items-center justify-center"
+                , title "Arquivar Tarefa"
                 ]
-                [ span [ class "material-symbols-outlined", style "font-size" "18px" ] [ text "delete" ] ]
+                [ span [ class "material-symbols-outlined", style "font-size" "18px" ] [ text "archive" ] ]
             ]
         ]
+
+
+isPlanTaskArchived : Model -> String -> String -> Bool
+isPlanTaskArchived model planId planTaskId =
+    let
+        targetOrigin =
+            "plano:" ++ planId ++ ":" ++ planTaskId
+    in
+    List.any (\t -> t.origin == targetOrigin && t.archived) model.tasks
