@@ -1,5 +1,6 @@
 module Pages.Arquivo exposing (viewArquivo)
 
+import Data.Plan exposing (Plan)
 import Data.Task exposing (Task)
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -7,34 +8,57 @@ import Html.Events exposing (..)
 import Types exposing (Model, Msg(..))
 
 
+type ArchivedItem
+    = ArchivedTask Task
+    | ArchivedPlan Plan
+
+
 viewArquivo : Model -> Html Msg
 viewArquivo model =
     let
         archivedTasks =
             List.filter .archived model.tasks
+                |> List.map ArchivedTask
+
+        archivedPlans =
+            List.filter .archived model.plans
+                |> List.map ArchivedPlan
+
+        allArchivedItems =
+            archivedTasks ++ archivedPlans
     in
     div [ class "space-y-6" ]
         [ -- Title & Description
           div [ class "flex flex-col sm:flex-row sm:items-center justify-between gap-4" ]
             [ div []
-                [ h2 [ class "text-2xl font-bold text-slate-800" ] [ text "Arquivo de Tarefas" ]
-                , p [ class "text-slate-600 text-sm mt-1" ] [ text "Gerencie suas tarefas arquivadas e restaure-as quando necessário." ]
+                [ h2 [ class "text-2xl font-bold text-slate-800" ] [ text "Arquivo" ]
+                , p [ class "text-slate-600 text-sm mt-1" ] [ text "Gerencie suas tarefas e planos arquivados e restaure-os quando necessário." ]
                 ]
             ]
-        , -- Tasks List
+        , -- Unified List
           div [ class "bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden" ]
-            [ if List.isEmpty archivedTasks then
+            [ if List.isEmpty allArchivedItems then
                 div [ class "p-12 text-center space-y-3" ]
                     [ span [ class "material-symbols-outlined text-slate-300 text-5xl block mx-auto" ] [ text "archive" ]
-                    , h3 [ class "text-lg font-medium text-slate-700" ] [ text "Nenhuma tarefa arquivada" ]
-                    , p [ class "text-slate-500 text-sm max-w-md mx-auto" ] [ text "Suas tarefas arquivadas aparecerão aqui." ]
+                    , h3 [ class "text-lg font-medium text-slate-700" ] [ text "Nenhum item arquivado" ]
+                    , p [ class "text-slate-500 text-sm max-w-md mx-auto" ] [ text "Suas tarefas e planos arquivados aparecerão aqui." ]
                     ]
 
               else
                 ul [ class "divide-y divide-slate-100" ]
-                    (List.map viewArchivedTaskItem archivedTasks)
+                    (List.map viewArchivedItem allArchivedItems)
             ]
         ]
+
+
+viewArchivedItem : ArchivedItem -> Html Msg
+viewArchivedItem item =
+    case item of
+        ArchivedTask task ->
+            viewArchivedTaskItem task
+
+        ArchivedPlan plan ->
+            viewArchivedPlanItem plan
 
 
 viewArchivedTaskItem : Task -> Html Msg
@@ -69,6 +93,34 @@ viewArchivedTaskItem task =
                 , onClick (RestoreTask task.id)
                 , class "text-slate-400 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 transition-all flex items-center justify-center"
                 , title "Restaurar Tarefa"
+                ]
+                [ span [ class "material-symbols-outlined", style "font-size" "20px" ] [ text "unarchive" ] ]
+            ]
+        ]
+
+
+viewArchivedPlanItem : Plan -> Html Msg
+viewArchivedPlanItem plan =
+    li [ class "p-4 flex items-center justify-between gap-4 hover:bg-slate-50 transition-colors" ]
+        [ div [ class "flex items-start gap-3 flex-1" ]
+            [ div [ class "mt-1 text-slate-400 flex items-center justify-center" ]
+                [ span [ class "material-symbols-outlined", style "font-size" "20px" ] [ text "schema" ] ]
+            , div [ class "space-y-1" ]
+                [ p [ class "font-medium text-slate-800" ] [ text plan.title ]
+                , div [ class "flex flex-wrap items-center gap-2" ]
+                    [ span [ class "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-100" ]
+                        [ span [ class "material-symbols-outlined", style "font-size" "12px" ] [ text "schema" ]
+                        , text "Plano"
+                        ]
+                    ]
+                ]
+            ]
+        , div [ class "flex items-center gap-1" ]
+            [ button
+                [ type_ "button"
+                , onClick (RestorePlan plan.id)
+                , class "text-slate-400 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 transition-all flex items-center justify-center"
+                , title "Restaurar Plano"
                 ]
                 [ span [ class "material-symbols-outlined", style "font-size" "20px" ] [ text "unarchive" ] ]
             ]

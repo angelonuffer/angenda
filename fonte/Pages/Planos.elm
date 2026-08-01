@@ -34,8 +34,20 @@ viewPlanos model =
                     ]
 
               else
-                div [ class "space-y-4" ]
-                    (List.map (viewPlanItem model) model.plans)
+                let
+                    activePlans =
+                        List.filter (\p -> not p.archived) model.plans
+                in
+                if List.isEmpty activePlans then
+                    div [ class "bg-white p-12 text-center space-y-3 rounded-xl border border-slate-200 shadow-sm" ]
+                        [ span [ class "material-symbols-outlined text-slate-300 text-5xl block mx-auto" ] [ text "schema" ]
+                        , h3 [ class "text-lg font-medium text-slate-700" ] [ text "Nenhum plano ativo" ]
+                        , p [ class "text-slate-500 text-sm max-w-md mx-auto" ] [ text "Comece criando um plano para estruturar sua jornada!" ]
+                        ]
+
+                else
+                    div [ class "space-y-4" ]
+                        (List.map (viewPlanItem model) activePlans)
             ]
         ]
 
@@ -143,11 +155,11 @@ viewPlanItem model plan =
                     [ text (if isEditing then "Fechar" else "Gerenciar Tarefas") ]
                 , button
                     [ type_ "button"
-                    , onClick (DeletePlanAction plan.id)
-                    , class "text-slate-400 hover:text-rose-600 p-2 rounded-lg hover:bg-rose-50 transition-all flex items-center justify-center"
-                    , title "Excluir Plano"
+                    , onClick (ArchivePlan plan.id)
+                    , class "text-slate-400 hover:text-amber-600 p-2 rounded-lg hover:bg-amber-50 transition-all flex items-center justify-center"
+                    , title "Arquivar Plano"
                     ]
-                    [ span [ class "material-symbols-outlined", style "font-size" "20px" ] [ text "delete" ] ]
+                    [ span [ class "material-symbols-outlined", style "font-size" "20px" ] [ text "archive" ] ]
                 ]
             ]
         , if isEditing then

@@ -679,6 +679,7 @@ update msg model =
                         , title = model.planTitleInput
                         , description = model.planDescInput
                         , tasks = []
+                        , archived = False
                         }
                 in
                 ( { model
@@ -692,24 +693,88 @@ update msg model =
                     ]
                 )
 
-        DeletePlanAction id ->
+        ArchivePlan id ->
             let
-                -- Also remove plan tasks from main task list
-                newTasks =
-                    List.filter
+                updatedPlans =
+                    List.map
+                        (\p ->
+                            if p.id == id then
+                                { p | archived = True }
+                            else
+                                p
+                        )
+                        model.plans
+
+                maybePlan =
+                    List.filter (\p -> p.id == id) model.plans |> List.head
+
+                -- Also archive plan tasks from main task list
+                updatedTasks =
+                    List.map
                         (\t ->
-                            not (String.startsWith ("plano:" ++ id ++ ":") t.origin)
+                            if String.startsWith ("plano:" ++ id ++ ":") t.origin then
+                                { t | archived = True }
+                            else
+                                t
                         )
                         model.tasks
 
-                -- Delete port commands for all deleted tasks
-                deletedTasksCmds =
+                planTasksCmds =
                     model.tasks
                         |> List.filter (\t -> String.startsWith ("plano:" ++ id ++ ":") t.origin)
-                        |> List.map (\t -> Ports.deleteTask t.id)
+                        |> List.map (\t -> Ports.saveTask (Task.encodeTask { t | archived = True }))
+
+                planCmd =
+                    case maybePlan of
+                        Just plan ->
+                            [ Ports.savePlan (Plan.encodePlan { plan | archived = True }) ]
+                        Nothing ->
+                            []
             in
-            ( { model | plans = List.filter (\p -> p.id /= id) model.plans, tasks = newTasks }
-            , Cmd.batch (Ports.deletePlan id :: deletedTasksCmds)
+            ( { model | plans = updatedPlans, tasks = updatedTasks }
+            , Cmd.batch (planCmd ++ planTasksCmds)
+            )
+
+        RestorePlan id ->
+            let
+                updatedPlans =
+                    List.map
+                        (\p ->
+                            if p.id == id then
+                                { p | archived = False }
+                            else
+                                p
+                        )
+                        model.plans
+
+                maybePlan =
+                    List.filter (\p -> p.id == id) model.plans |> List.head
+
+                -- Also restore plan tasks in main task list
+                updatedTasks =
+                    List.map
+                        (\t ->
+                            if String.startsWith ("plano:" ++ id ++ ":") t.origin then
+                                { t | archived = False }
+                            else
+                                t
+                        )
+                        model.tasks
+
+                planTasksCmds =
+                    model.tasks
+                        |> List.filter (\t -> String.startsWith ("plano:" ++ id ++ ":") t.origin)
+                        |> List.map (\t -> Ports.saveTask (Task.encodeTask { t | archived = False }))
+
+                planCmd =
+                    case maybePlan of
+                        Just plan ->
+                            [ Ports.savePlan (Plan.encodePlan { plan | archived = False }) ]
+                        Nothing ->
+                            []
+            in
+            ( { model | plans = updatedPlans, tasks = updatedTasks }
+            , Cmd.batch (planCmd ++ planTasksCmds)
             )
 
         StartEditPlan id ->

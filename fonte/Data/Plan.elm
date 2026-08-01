@@ -16,6 +16,7 @@ type alias Plan =
     , title : String
     , description : String
     , tasks : List PlanTask
+    , archived : Bool
     }
 
 
@@ -43,13 +44,15 @@ encodePlan plan =
         , ( "title", Encode.string plan.title )
         , ( "description", Encode.string plan.description )
         , ( "tasks", Encode.list encodePlanTask plan.tasks )
+        , ( "archived", Encode.bool plan.archived )
         ]
 
 
 planDecoder : Decoder Plan
 planDecoder =
-    Decode.map4 Plan
-        (Decode.field "id" Decode.string)
-        (Decode.field "title" Decode.string)
-        (Decode.field "description" Decode.string)
-        (Decode.field "tasks" (Decode.list planTaskDecoder))
+    Decode.succeed Plan
+        |> Decode.andThen (\f -> Decode.map f (Decode.field "id" Decode.string))
+        |> Decode.andThen (\f -> Decode.map f (Decode.field "title" Decode.string))
+        |> Decode.andThen (\f -> Decode.map f (Decode.field "description" Decode.string))
+        |> Decode.andThen (\f -> Decode.map f (Decode.field "tasks" (Decode.list planTaskDecoder)))
+        |> Decode.andThen (\f -> Decode.map f (Decode.oneOf [ Decode.field "archived" Decode.bool, Decode.succeed False ]))
