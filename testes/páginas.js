@@ -1,4 +1,4 @@
-const { test } = require('@playwright/test');
+const { test, expect } = require('@playwright/test');
 const path = require('path');
 const fs = require('fs');
 
@@ -134,12 +134,8 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
   await page.waitForSelector('button[title="Fechar"]');
   await page.setViewportSize(viewports.vertical);
   await page.waitForTimeout(200);
-  const drawerDir = path.join(__dirname, 'páginas', 'tarefas');
-  if (!fs.existsSync(drawerDir)) {
-    fs.mkdirSync(drawerDir, { recursive: true });
-  }
-  await page.screenshot({ path: path.join(drawerDir, 'drawer-vertical.png') });
-  console.log('Saved drawer-vertical.png');
+  await expect(page).toHaveScreenshot(['tarefas', 'drawer-vertical.png']);
+  console.log('Asserted drawer-vertical.png');
   // Close the drawer
   await page.click('button[title="Fechar"]');
 
@@ -155,7 +151,7 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
   ];
 
   for (const route of routes) {
-    console.log(`Taking screenshots for /${route}...`);
+    console.log(`Taking/asserting screenshots for /${route}...`);
     await page.goto(`/${route}`);
     await page.waitForTimeout(500); // Wait for Elm view transition
 
@@ -164,18 +160,13 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
       saveRoute = 'tarefas/editar';
     }
 
-    const dir = path.join(__dirname, 'páginas', saveRoute);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-
     for (const [layout, viewport] of Object.entries(viewports)) {
       await page.setViewportSize(viewport);
       await page.waitForTimeout(200); // Allow render adjustment
 
-      const screenshotPath = path.join(dir, `${layout}.png`);
-      await page.screenshot({ path: screenshotPath, fullPage: false });
-      console.log(`Saved ${screenshotPath}`);
+      const segments = [...saveRoute.split('/'), `${layout}.png`];
+      await expect(page).toHaveScreenshot(segments, { fullPage: false });
+      console.log(`Asserted ${segments.join('/')}`);
     }
   }
 
