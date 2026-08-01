@@ -1,4 +1,4 @@
-module Pages.Tarefas exposing (viewTarefas)
+module Pages.Tarefas exposing (viewTarefas, viewDateBadge)
 
 import Data.Task exposing (Task)
 import Dict exposing (Dict)
