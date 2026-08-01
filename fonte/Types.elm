@@ -56,7 +56,8 @@ type Msg
     | DeleteRoutineAction String
     | GenerateTaskFromRoutine Routine
     | CreatePlan
-    | DeletePlanAction String
+    | ArchivePlan String
+    | RestorePlan String
     | StartEditPlan String
     | StopEditPlan
     | AddPlanTask String
