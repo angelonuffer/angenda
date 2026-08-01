@@ -23,6 +23,7 @@ type alias Model =
     , routineRecurrenceInput : String
     , planTitleInput : String
     , planDescInput : String
+    , planDeadlineInput : String
     , editingPlanId : Maybe String
     , newPlanTaskTitle : String
     , today : String
@@ -44,6 +45,7 @@ type Msg
     | InputRoutineRecurrence String
     | InputPlanTitle String
     | InputPlanDesc String
+    | InputPlanDeadline String
     | InputPlanTaskTitle String
     -- Actions
     | CreateTask
