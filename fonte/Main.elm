@@ -11,7 +11,7 @@ import Html.Events exposing (..)
 import Json.Decode as Decode
 import Pages.Arquivo exposing (viewArquivo)
 import Pages.NovaTarefa exposing (viewNovaTarefa)
-import Pages.Planos exposing (viewPlanos, viewNovoPlano)
+import Pages.Planos exposing (viewPlanos, viewNovoPlano, viewEditarPlano)
 import Pages.Rotinas exposing (viewRotinas)
 import Pages.Tarefas exposing (viewTarefas)
 import Ports
@@ -95,6 +95,17 @@ update msg model =
                         AdicionarPlano ->
                             ( model.planTitleInput, model.planDescInput )
 
+                        EditarPlano planId ->
+                            let
+                                maybePlan =
+                                    model.plans
+                                        |> List.filter (\p -> p.id == planId)
+                                        |> List.head
+                            in
+                            ( maybePlan |> Maybe.map .title |> Maybe.withDefault ""
+                            , maybePlan |> Maybe.map .description |> Maybe.withDefault ""
+                            )
+
                         _ ->
                             ( "", "" )
             in
@@ -129,6 +140,22 @@ update msg model =
                                 _ ->
                                     ( model.taskTitleInput, model.taskDateInput )
 
+                        ( newPlanTitleInput, newPlanDescInput ) =
+                            case model.route of
+                                Route.EditarPlano planId ->
+                                    let
+                                        maybePlan =
+                                            payload.plans
+                                                |> List.filter (\p -> p.id == planId)
+                                                |> List.head
+                                    in
+                                    ( maybePlan |> Maybe.map .title |> Maybe.withDefault model.planTitleInput
+                                    , maybePlan |> Maybe.map .description |> Maybe.withDefault model.planDescInput
+                                    )
+
+                                _ ->
+                                    ( model.planTitleInput, model.planDescInput )
+
                         -- Automatic archiving of completed past tasks on load
                         tasksToArchive =
                             List.filter (\t -> t.completed && t.date /= "" && t.date < model.today && not t.archived) payload.tasks
@@ -154,6 +181,8 @@ update msg model =
                         , plans = payload.plans
                         , taskTitleInput = newTitleInput
                         , taskDateInput = newDateInput
+                        , planTitleInput = newPlanTitleInput
+                        , planDescInput = newPlanDescInput
                       }
                     , archiveCmds
                     )
@@ -242,7 +271,7 @@ update msg model =
                                 , Cmd.batch
                                     [ Ports.savePlan (Plan.encodePlan plan)
                                     , Ports.saveTask (Task.encodeTask newTask)
-                                    , Nav.pushUrl model.key "/planos"
+                                    , Nav.pushUrl model.key ("/planos/editar/" ++ planId)
                                     ]
                                 )
 
@@ -355,11 +384,12 @@ update msg model =
                                     _ ->
                                         ( model.plans, Cmd.none )
                             redirectUrl =
-                                if String.startsWith "plano:" task.origin then
-                                    "/planos"
+                                case String.split ":" task.origin of
+                                    [ "plano", planId, _ ] ->
+                                        "/planos/editar/" ++ planId
 
-                                else
-                                    "/tarefas"
+                                    _ ->
+                                        "/tarefas"
                         in
                         ( { model | tasks = updatedTasks, plans = updatedPlans, taskTitleInput = "", taskDateInput = "" }
                         , Cmd.batch
@@ -693,6 +723,46 @@ update msg model =
                     ]
                 )
 
+        SaveEditedPlan id ->
+            if String.trim model.planTitleInput == "" then
+                ( model, Cmd.none )
+
+            else
+                let
+                    maybePlan =
+                        List.filter (\p -> p.id == id) model.plans |> List.head
+                in
+                case maybePlan of
+                    Just plan ->
+                        let
+                            updatedPlan =
+                                { plan | title = String.trim model.planTitleInput, description = model.planDescInput }
+
+                            updatedPlans =
+                                List.map
+                                    (\p ->
+                                        if p.id == id then
+                                            updatedPlan
+
+                                        else
+                                            p
+                                    )
+                                    model.plans
+                        in
+                        ( { model
+                            | plans = updatedPlans
+                            , planTitleInput = ""
+                            , planDescInput = ""
+                          }
+                        , Cmd.batch
+                            [ Ports.savePlan (Plan.encodePlan updatedPlan)
+                            , Nav.pushUrl model.key "/planos"
+                            ]
+                        )
+
+                    Nothing ->
+                        ( model, Cmd.none )
+
         ArchivePlan id ->
             let
                 updatedPlans =
@@ -999,6 +1069,9 @@ view model =
                         AdicionarPlano ->
                             viewNovoPlano model
 
+                        EditarPlano planId ->
+                            viewEditarPlano model planId
+
                         Arquivo ->
                             viewArquivo model
                     ]
@@ -1038,6 +1111,9 @@ viewSidebar model =
                     True
 
                 AdicionarPlano ->
+                    True
+
+                EditarPlano _ ->
                     True
 
                 _ ->
@@ -1118,6 +1194,9 @@ viewHeader model =
                                 True
 
                             AdicionarPlano ->
+                                True
+
+                            EditarPlano _ ->
                                 True
 
                             _ ->

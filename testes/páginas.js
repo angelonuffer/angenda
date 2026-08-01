@@ -62,8 +62,8 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
   await page.click('button[type="submit"]');
   await page.waitForTimeout(200);
 
-  // Manage tasks on the newly created plan
-  await page.click('button:has-text("Gerenciar Tarefas")');
+  // Edit the newly created plan
+  await page.click('a:has-text("Editar")');
   await page.waitForSelector('#add-plan-task-btn');
 
   // Step 3a: Add first plan task via the new page
@@ -94,8 +94,8 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
   await page.click('ol li button');
   await page.waitForTimeout(200);
 
-  // Close the manager view
-  await page.click('button:has-text("Fechar")');
+  // Close the edit view
+  await page.click('a:has-text("Cancelar")');
   await page.waitForTimeout(200);
 
   // Step 4: Edit a task
@@ -147,6 +147,7 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
     'rotinas',
     'planos',
     'planos/novo',
+    'planos/editar/plan_0_Lançar_novo_website_pessoal',
     'arquivo'
   ];
 
@@ -158,6 +159,8 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
     let saveRoute = route;
     if (route.startsWith('tarefas/editar/')) {
       saveRoute = 'tarefas/editar';
+    } else if (route.startsWith('planos/editar/')) {
+      saveRoute = 'planos/editar';
     }
 
     for (const [layout, viewport] of Object.entries(viewports)) {
