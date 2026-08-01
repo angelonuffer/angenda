@@ -986,46 +986,29 @@ update msg model =
                 Nothing ->
                     ( model, Cmd.none )
 
-        DeletePlanTask planId planTaskId ->
+        ArchivePlanTask planId planTaskId ->
             let
-                updatedPlans =
-                    List.map
-                        (\p ->
-                            if p.id == planId then
-                                { p | tasks = List.filter (\pt -> pt.id /= planTaskId) p.tasks }
-
-                            else
-                                p
-                        )
-                        model.plans
-
-                maybePlan =
-                    List.filter (\p -> p.id == planId) updatedPlans |> List.head
-
-                -- Also remove from main task list
-                newTasks =
-                    List.filter
-                        (\t ->
-                            t.origin /= ("plano:" ++ planId ++ ":" ++ planTaskId)
-                        )
-                        model.tasks
-
-                -- Delete from db
-                maybeTaskToDelete =
+                maybeTaskToArchive =
                     List.filter (\t -> t.origin == ("plano:" ++ planId ++ ":" ++ planTaskId)) model.tasks |> List.head
-
-                deleteTaskCmd =
-                    case maybeTaskToDelete of
-                        Just task ->
-                            Ports.deleteTask task.id
-
-                        Nothing ->
-                            Cmd.none
             in
-            case maybePlan of
-                Just plan ->
-                    ( { model | plans = updatedPlans, tasks = newTasks }
-                    , Cmd.batch [ Ports.savePlan (Plan.encodePlan plan), deleteTaskCmd ]
+            case maybeTaskToArchive of
+                Just task ->
+                    let
+                        updatedTask =
+                            { task | archived = True }
+
+                        updatedTasks =
+                            List.map
+                                (\t ->
+                                    if t.id == task.id then
+                                        updatedTask
+                                    else
+                                        t
+                                )
+                                model.tasks
+                    in
+                    ( { model | tasks = updatedTasks }
+                    , Ports.saveTask (Task.encodeTask updatedTask)
                     )
 
                 Nothing ->

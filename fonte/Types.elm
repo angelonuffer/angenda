@@ -63,7 +63,7 @@ type Msg
     | StopEditPlan
     | AddPlanTask String
     | TogglePlanTask String String
-    | DeletePlanTask String String
+    | ArchivePlanTask String String
 
 
 type alias LoadedDataPayload =
