@@ -11,7 +11,7 @@ import Html.Events exposing (..)
 import Json.Decode as Decode
 import Pages.Arquivo exposing (viewArquivo)
 import Pages.NovaTarefa exposing (viewNovaTarefa)
-import Pages.Planos exposing (viewPlanos)
+import Pages.Planos exposing (viewPlanos, viewNovoPlano)
 import Pages.Rotinas exposing (viewRotinas)
 import Pages.Tarefas exposing (viewTarefas)
 import Ports
@@ -89,8 +89,25 @@ update msg model =
 
                         _ ->
                             ( "", "" )
+
+                ( newPlanTitleInput, newPlanDescInput ) =
+                    case newRoute of
+                        AdicionarPlano ->
+                            ( model.planTitleInput, model.planDescInput )
+
+                        _ ->
+                            ( "", "" )
             in
-            ( { model | route = newRoute, taskTitleInput = newTitleInput, taskDateInput = newDateInput, drawerOpen = False }, Cmd.none )
+            ( { model
+                | route = newRoute
+                , taskTitleInput = newTitleInput
+                , taskDateInput = newDateInput
+                , planTitleInput = newPlanTitleInput
+                , planDescInput = newPlanDescInput
+                , drawerOpen = False
+              }
+            , Cmd.none
+            )
 
         DataLoadedRaw rawValue ->
             case Decode.decodeValue Types.loadedDataDecoder rawValue of
@@ -669,7 +686,10 @@ update msg model =
                     , planTitleInput = ""
                     , planDescInput = ""
                   }
-                , Ports.savePlan (Plan.encodePlan newPlan)
+                , Cmd.batch
+                    [ Ports.savePlan (Plan.encodePlan newPlan)
+                    , Nav.pushUrl model.key "/planos"
+                    ]
                 )
 
         DeletePlanAction id ->
@@ -909,6 +929,9 @@ view model =
                     Planos ->
                         viewPlanos model
 
+                    AdicionarPlano ->
+                        viewNovoPlano model
+
                     Arquivo ->
                         viewArquivo model
                 ]
@@ -982,7 +1005,17 @@ viewHeader model =
                             _ ->
                                 False
                         )
-                    , viewDrawerLink "/planos" "schema" "Planos" (currentRoute == Planos)
+                    , viewDrawerLink "/planos" "schema" "Planos"
+                        (case currentRoute of
+                            Planos ->
+                                True
+
+                            AdicionarPlano ->
+                                True
+
+                            _ ->
+                                False
+                        )
                     , viewDrawerLink "/rotinas" "repeat" "Rotinas" (currentRoute == Rotinas)
                     , viewDrawerLink "/arquivo" "archive" "Arquivo" (currentRoute == Arquivo)
                     ]

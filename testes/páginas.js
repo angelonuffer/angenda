@@ -53,6 +53,8 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
   // Step 3: Navigate to Planos and create a plan
   console.log('Navigating to /planos to pre-populate plans...');
   await page.goto('/planos');
+  await page.waitForSelector('a:has-text("Criar Plano")', { timeout: 10000 });
+  await page.click('a:has-text("Criar Plano")');
   await page.waitForSelector('#new-plan-title', { timeout: 10000 });
 
   await page.fill('#new-plan-title', 'Lançar novo website pessoal');
@@ -148,6 +150,7 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
     'tarefas/editar/task_0_Comprar_mantimentos_para_a_semana',
     'rotinas',
     'planos',
+    'planos/novo',
     'arquivo'
   ];
 

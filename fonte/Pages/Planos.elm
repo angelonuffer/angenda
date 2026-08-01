@@ -1,4 +1,4 @@
-module Pages.Planos exposing (viewPlanos)
+module Pages.Planos exposing (viewPlanos, viewNovoPlano)
 
 import Data.Plan exposing (Plan, PlanTask)
 import Html exposing (..)
@@ -10,44 +10,18 @@ import Types exposing (Model, Msg(..))
 viewPlanos : Model -> Html Msg
 viewPlanos model =
     div [ class "space-y-6" ]
-        [ div []
-            [ h2 [ class "text-2xl font-bold text-slate-800" ] [ text "Meus Planos" ]
-            , p [ class "text-slate-600 text-sm mt-1" ] [ text "Crie sequências de tarefas estruturadas para alcançar um objetivo maior." ]
-            ]
-        , -- Add Plan Form
-          Html.form [ onSubmit CreatePlan, class "bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4" ]
-            [ h3 [ class "font-semibold text-slate-700 text-sm" ] [ text "Novo Plano (Projeto)" ]
-            , div [ class "grid grid-cols-1 gap-4" ]
-                [ div []
-                    [ label [ for "new-plan-title", class "sr-only" ] [ text "Título do Plano" ]
-                    , input
-                        [ type_ "text"
-                        , id "new-plan-title"
-                        , placeholder "Ex: Aprender Alemão, Organizar Viagem de Férias..."
-                        , value model.planTitleInput
-                        , onInput InputPlanTitle
-                        , class "w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 text-slate-800"
-                        ]
-                        []
-                    ]
-                , div []
-                    [ label [ for "new-plan-desc", class "sr-only" ] [ text "Descrição" ]
-                    , textarea
-                        [ id "new-plan-desc"
-                        , placeholder "Descreva o objetivo do plano..."
-                        , value model.planDescInput
-                        , onInput InputPlanDesc
-                        , class "w-full border border-slate-300 rounded-lg px-4 py-2 h-20 focus:outline-none focus:ring-2 focus:ring-red-500 text-slate-800"
-                        ]
-                        []
-                    ]
+        [ div [ class "flex flex-col sm:flex-row sm:items-center justify-between gap-4" ]
+            [ div []
+                [ h2 [ class "text-2xl font-bold text-slate-800" ] [ text "Meus Planos" ]
+                , p [ class "text-slate-600 text-sm mt-1" ] [ text "Crie sequências de tarefas estruturadas para alcançar um objetivo maior." ]
                 ]
-            , div [ class "flex justify-end" ]
-                [ button
-                    [ type_ "submit"
-                    , class "bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2 rounded-lg transition-colors shadow-sm"
-                    ]
-                    [ text "Criar Plano" ]
+            , a
+                [ href "/planos/novo"
+                , id "btn-novo-plano"
+                , class "bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2.5 rounded-lg transition-colors shadow-sm text-sm flex items-center justify-center gap-2 cursor-pointer no-underline self-start sm:self-auto"
+                ]
+                [ span [ class "material-symbols-outlined", style "font-size" "18px" ] [ text "add" ]
+                , text "Criar Plano"
                 ]
             ]
         , -- Plans List & Editor
@@ -56,12 +30,64 @@ viewPlanos model =
                 div [ class "bg-white p-12 text-center space-y-3 rounded-xl border border-slate-200 shadow-sm" ]
                     [ span [ class "material-symbols-outlined text-slate-300 text-5xl block mx-auto" ] [ text "schema" ]
                     , h3 [ class "text-lg font-medium text-slate-700" ] [ text "Nenhum plano cadastrado" ]
-                    , p [ class "text-slate-500 text-sm max-w-md mx-auto" ] [ text "Comece criando um plano no formulário acima para estruturar sua jornada!" ]
+                    , p [ class "text-slate-500 text-sm max-w-md mx-auto" ] [ text "Comece criando um plano para estruturar sua jornada!" ]
                     ]
 
               else
                 div [ class "space-y-4" ]
                     (List.map (viewPlanItem model) model.plans)
+            ]
+        ]
+
+
+viewNovoPlano : Model -> Html Msg
+viewNovoPlano model =
+    div [ class "space-y-6 max-w-xl mx-auto" ]
+        [ -- Title & Description
+          div []
+            [ h2 [ class "text-2xl font-bold text-slate-800" ] [ text "Criar Novo Plano" ]
+            , p [ class "text-slate-600 text-sm mt-1" ] [ text "Defina o título e o objetivo de seu novo plano (projeto)." ]
+            ]
+        , -- Add Plan Form Card
+          div [ class "bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4" ]
+            [ Html.form [ onSubmit CreatePlan, class "space-y-4" ]
+                [ div []
+                    [ label [ for "new-plan-title", class "block text-sm font-semibold text-slate-700 mb-1" ] [ text "Título do Plano" ]
+                    , input
+                        [ type_ "text"
+                        , id "new-plan-title"
+                        , placeholder "Ex: Aprender Alemão, Organizar Viagem de Férias..."
+                        , value model.planTitleInput
+                        , onInput InputPlanTitle
+                        , class "w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 text-slate-800"
+                        , autofocus True
+                        ]
+                        []
+                    ]
+                , div []
+                    [ label [ for "new-plan-desc", class "block text-sm font-semibold text-slate-700 mb-1" ] [ text "Descrição" ]
+                    , textarea
+                        [ id "new-plan-desc"
+                        , placeholder "Descreva o objetivo do plano..."
+                        , value model.planDescInput
+                        , onInput InputPlanDesc
+                        , class "w-full border border-slate-300 rounded-lg px-4 py-2 h-24 focus:outline-none focus:ring-2 focus:ring-red-500 text-slate-800"
+                        ]
+                        []
+                    ]
+                , div [ class "flex items-center justify-end gap-3 pt-2" ]
+                    [ a
+                        [ href "/planos"
+                        , class "px-5 py-2 rounded-lg border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors text-center text-sm no-underline"
+                        ]
+                        [ text "Cancelar" ]
+                    , button
+                        [ type_ "submit"
+                        , class "bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2 rounded-lg transition-colors shadow-sm text-sm"
+                        ]
+                        [ text "Criar Plano" ]
+                    ]
+                ]
             ]
         ]
 
