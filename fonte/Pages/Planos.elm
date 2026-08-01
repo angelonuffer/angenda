@@ -5,6 +5,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Types exposing (Model, Msg(..))
+import Pages.Tarefas exposing (viewDateBadge)
 
 
 viewPlanos : Model -> Html Msg
@@ -263,7 +264,7 @@ viewEditarPlano model planId =
 
                       else
                         ol [ class "divide-y divide-slate-100 border border-slate-100 rounded-lg overflow-hidden bg-slate-50/20" ]
-                            (List.indexedMap (viewPlanTaskItem plan.id) activeTasks)
+                            (List.indexedMap (viewPlanTaskItem model plan.id) activeTasks)
                     ]
                 ]
 
@@ -278,8 +279,18 @@ viewEditarPlano model planId =
                 ]
 
 
-viewPlanTaskItem : String -> Int -> PlanTask -> Html Msg
-viewPlanTaskItem planId index pt =
+getPlanTaskDate : Model -> String -> String -> String
+getPlanTaskDate model planId planTaskId =
+    let
+        targetOrigin =
+            "plano:" ++ planId ++ ":" ++ planTaskId
+    in
+    case List.filter (\t -> t.origin == targetOrigin) model.tasks |> List.head of
+        Just t -> t.date
+        Nothing -> ""
+
+viewPlanTaskItem : Model -> String -> Int -> PlanTask -> Html Msg
+viewPlanTaskItem model planId index pt =
     li [ class <| "p-3 flex items-center justify-between gap-3 text-sm " ++ if pt.completed then "opacity-70 bg-amber-50/10" else "" ]
         [ div [ class "flex items-center gap-2" ]
             [ button
@@ -297,6 +308,7 @@ viewPlanTaskItem planId index pt =
                 [ span [ class "material-symbols-outlined", style "font-size" "12px", style "font-weight" "bold" ] [ text "check" ] ]
             , span [ class "font-semibold text-slate-400" ] [ text (String.fromInt (index + 1) ++ ".") ]
             , span [ class <| "font-medium " ++ if pt.completed then "line-through text-slate-400" else "text-slate-700" ] [ text pt.title ]
+            , viewDateBadge (getPlanTaskDate model planId pt.id)
             ]
         , div [ class "flex items-center gap-1" ]
             [ a
