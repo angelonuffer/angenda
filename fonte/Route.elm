@@ -12,6 +12,7 @@ type Route
     | EditarTarefa String
     | Arquivo
     | AdicionarPlano
+    | EditarPlano String
 
 
 routeParser : Parser (Route -> a) a
@@ -25,6 +26,7 @@ routeParser =
         , Parser.map Rotinas (Parser.s "rotinas")
         , Parser.map Planos (Parser.s "planos")
         , Parser.map AdicionarPlano (Parser.s "planos" </> Parser.s "novo")
+        , Parser.map EditarPlano (Parser.s "planos" </> Parser.s "editar" </> Parser.string)
         , Parser.map Arquivo (Parser.s "arquivo")
         ]
 

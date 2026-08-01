@@ -20,11 +20,12 @@ viewNovaTarefa model =
                         cancelHref =
                             case maybeTask of
                                 Just task ->
-                                    if String.startsWith "plano:" task.origin then
-                                        "/planos"
+                                    case String.split ":" task.origin of
+                                        [ "plano", planId, _ ] ->
+                                            "/planos/editar/" ++ planId
 
-                                    else
-                                        "/tarefas"
+                                        _ ->
+                                            "/tarefas"
 
                                 Nothing ->
                                     "/tarefas"
@@ -50,7 +51,7 @@ viewNovaTarefa model =
                     , submitMsg = CreateTask
                     , buttonText = "Adicionar"
                     , editingId = Nothing
-                    , cancelHref = "/planos"
+                    , cancelHref = "/planos/editar/" ++ planId
                     }
 
                 _ ->

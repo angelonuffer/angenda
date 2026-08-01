@@ -1,4 +1,4 @@
-module Pages.Planos exposing (viewPlanos, viewNovoPlano)
+module Pages.Planos exposing (viewPlanos, viewNovoPlano, viewEditarPlano)
 
 import Data.Plan exposing (Plan, PlanTask)
 import Html exposing (..)
@@ -107,9 +107,6 @@ viewNovoPlano model =
 viewPlanItem : Model -> Plan -> Html Msg
 viewPlanItem model plan =
     let
-        isEditing =
-            model.editingPlanId == Just plan.id
-
         totalTasks =
             List.length plan.tasks
 
@@ -124,7 +121,7 @@ viewPlanItem model plan =
                 round ((toFloat completedTasks / toFloat totalTasks) * 100)
     in
     div [ class "bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow" ]
-        [ div [ class "p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/50" ]
+        [ div [ class "p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/50" ]
             [ div [ class "space-y-1 flex-1" ]
                 [ h4 [ class "font-bold text-lg text-slate-800" ] [ text plan.title ]
                 , p [ class "text-slate-500 text-sm" ] [ text plan.description ]
@@ -139,20 +136,14 @@ viewPlanItem model plan =
                     p [ class "text-xs text-slate-400 italic mt-1" ] [ text "Nenhuma tarefa adicionada a este plano." ]
                 ]
             , div [ class "flex items-center gap-2 self-start sm:self-center" ]
-                [ button
-                    [ type_ "button"
-                    , id <| "gerenciar-plano-" ++ plan.id
-                    , onClick (if isEditing then StopEditPlan else StartEditPlan plan.id)
-                    , class <|
-                        "font-semibold text-sm px-4 py-2 rounded-lg border transition-colors "
-                            ++ (if isEditing then
-                                    "bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
-
-                                else
-                                    "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                               )
+                [ a
+                    [ href <| "/planos/editar/" ++ plan.id
+                    , id <| "editar-plano-" ++ plan.id
+                    , class "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold text-sm px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5 no-underline cursor-pointer shadow-sm"
                     ]
-                    [ text (if isEditing then "Fechar" else "Gerenciar Tarefas") ]
+                    [ span [ class "material-symbols-outlined", style "font-size" "18px" ] [ text "edit" ]
+                    , text "Editar"
+                    ]
                 , button
                     [ type_ "button"
                     , onClick (ArchivePlan plan.id)
@@ -162,32 +153,93 @@ viewPlanItem model plan =
                     [ span [ class "material-symbols-outlined", style "font-size" "20px" ] [ text "archive" ] ]
                 ]
             ]
-        , if isEditing then
-            div [ class "p-5 bg-white space-y-4 border-t border-slate-100" ]
-                [ h5 [ class "font-semibold text-slate-700 text-sm" ] [ text "Sequência de Tarefas do Plano" ]
-                , -- Button to navigate to new task page
-                  div [ class "flex justify-end" ]
-                    [ a
-                        [ href <| "/tarefas/nova/" ++ plan.id
-                        , id "add-plan-task-btn"
-                        , class "bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-1.5 rounded-lg text-sm transition-colors no-underline inline-flex items-center gap-1.5 cursor-pointer shadow-sm"
-                        ]
-                        [ span [ class "material-symbols-outlined", style "font-size" "18px" ] [ text "playlist_add" ]
-                        , text "Adicionar Tarefa ao Plano"
+        ]
+
+
+viewEditarPlano : Model -> String -> Html Msg
+viewEditarPlano model planId =
+    case List.filter (\p -> p.id == planId) model.plans |> List.head of
+        Just plan ->
+            div [ class "space-y-6 max-w-xl mx-auto" ]
+                [ -- Title & Description
+                  div []
+                    [ h2 [ class "text-2xl font-bold text-slate-800" ] [ text "Editar Plano" ]
+                    , p [ class "text-slate-600 text-sm mt-1" ] [ text "Altere o título, a descrição e gerencie as tarefas deste plano." ]
+                    ]
+                , -- Edit Plan Form Card
+                  div [ class "bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4" ]
+                    [ Html.form [ onSubmit (SaveEditedPlan planId), class "space-y-4" ]
+                        [ div []
+                            [ label [ for "edit-plan-title", class "block text-sm font-semibold text-slate-700 mb-1" ] [ text "Título do Plano" ]
+                            , input
+                                [ type_ "text"
+                                , id "edit-plan-title"
+                                , placeholder "Ex: Aprender Alemão, Organizar Viagem de Férias..."
+                                , value model.planTitleInput
+                                , onInput InputPlanTitle
+                                , class "w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 text-slate-800"
+                                , autofocus True
+                                ]
+                                []
+                            ]
+                        , div []
+                            [ label [ for "edit-plan-desc", class "block text-sm font-semibold text-slate-700 mb-1" ] [ text "Descrição" ]
+                            , textarea
+                                [ id "edit-plan-desc"
+                                , placeholder "Descreva o objetivo do plano..."
+                                , value model.planDescInput
+                                , onInput InputPlanDesc
+                                , class "w-full border border-slate-300 rounded-lg px-4 py-2 h-24 focus:outline-none focus:ring-2 focus:ring-red-500 text-slate-800"
+                                ]
+                                []
+                            ]
+                        , div [ class "flex items-center justify-end gap-3 pt-2" ]
+                            [ a
+                                [ href "/planos"
+                                , class "px-5 py-2 rounded-lg border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors text-center text-sm no-underline"
+                                ]
+                                [ text "Cancelar" ]
+                            , button
+                                [ type_ "submit"
+                                , class "bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2 rounded-lg transition-colors shadow-sm text-sm"
+                                ]
+                                [ text "Salvar" ]
+                            ]
                         ]
                     ]
-                , -- List of current plan tasks
-                  if List.isEmpty plan.tasks then
-                    p [ class "text-sm text-slate-400 italic text-center py-4" ] [ text "Sem tarefas adicionadas a este plano. Adicione tarefas para iniciar a sequência!" ]
+                , -- Sequence of Tasks of the Plan
+                  div [ class "bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4" ]
+                    [ h3 [ class "font-bold text-slate-800 text-base" ] [ text "Sequência de Tarefas do Plano" ]
+                    , -- Button to navigate to new task page
+                      div [ class "flex justify-end" ]
+                        [ a
+                            [ href <| "/tarefas/nova/" ++ plan.id
+                            , id "add-plan-task-btn"
+                            , class "bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-1.5 rounded-lg text-sm transition-colors no-underline inline-flex items-center gap-1.5 cursor-pointer shadow-sm"
+                            ]
+                            [ span [ class "material-symbols-outlined", style "font-size" "18px" ] [ text "playlist_add" ]
+                            , text "Adicionar Tarefa ao Plano"
+                            ]
+                        ]
+                    , -- List of current plan tasks
+                      if List.isEmpty plan.tasks then
+                        p [ class "text-sm text-slate-400 italic text-center py-4" ] [ text "Sem tarefas adicionadas a este plano. Adicione tarefas para iniciar a sequência!" ]
 
-                  else
-                    ol [ class "divide-y divide-slate-100 border border-slate-100 rounded-lg overflow-hidden bg-slate-50/20" ]
-                        (List.indexedMap (viewPlanTaskItem plan.id) plan.tasks)
+                      else
+                        ol [ class "divide-y divide-slate-100 border border-slate-100 rounded-lg overflow-hidden bg-slate-50/20" ]
+                            (List.indexedMap (viewPlanTaskItem plan.id) plan.tasks)
+                    ]
                 ]
 
-          else
-            text ""
-        ]
+        Nothing ->
+            div [ class "space-y-6 max-w-xl mx-auto text-center p-12" ]
+                [ h2 [ class "text-xl font-bold text-slate-800" ] [ text "Plano não encontrado" ]
+                , a
+                    [ href "/planos"
+                    , class "mt-4 inline-block bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2 rounded-lg transition-colors"
+                    ]
+                    [ text "Voltar para Planos" ]
+                ]
 
 
 viewPlanTaskItem : String -> Int -> PlanTask -> Html Msg
