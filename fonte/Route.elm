@@ -7,6 +7,7 @@ import Url.Parser as Parser exposing ((</>), Parser, top)
 type Route
     = Tarefas
     | Rotinas
+    | AdicionarRotina
     | Planos
     | AdicionarTarefa (Maybe String)
     | EditarTarefa String
@@ -24,6 +25,7 @@ routeParser =
         , Parser.map (\planId -> AdicionarTarefa (Just planId)) (Parser.s "tarefas" </> Parser.s "nova" </> Parser.string)
         , Parser.map EditarTarefa (Parser.s "tarefas" </> Parser.s "editar" </> Parser.string)
         , Parser.map Rotinas (Parser.s "rotinas")
+        , Parser.map AdicionarRotina (Parser.s "rotinas" </> Parser.s "nova")
         , Parser.map Planos (Parser.s "planos")
         , Parser.map AdicionarPlano (Parser.s "planos" </> Parser.s "novo")
         , Parser.map EditarPlano (Parser.s "planos" </> Parser.s "editar" </> Parser.string)

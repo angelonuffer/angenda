@@ -1,4 +1,4 @@
-module Pages.Rotinas exposing (viewRotinas)
+module Pages.Rotinas exposing (viewRotinas, viewNovaRotina)
 
 import Data.Routine exposing (Routine)
 import Html exposing (..)
@@ -10,46 +10,18 @@ import Types exposing (Model, Msg(..))
 viewRotinas : Model -> Html Msg
 viewRotinas model =
     div [ class "space-y-6" ]
-        [ div []
-            [ h2 [ class "text-2xl font-bold text-slate-800" ] [ text "Minhas Rotinas" ]
-            , p [ class "text-slate-600 text-sm mt-1" ] [ text "Defina tarefas recorrentes e crie instâncias delas na lista principal com um clique." ]
-            ]
-        , -- Add Routine Form
-          Html.form [ onSubmit CreateRoutine, class "bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4" ]
-            [ h3 [ class "font-semibold text-slate-700 text-sm" ] [ text "Nova Rotina" ]
-            , div [ class "grid grid-cols-1 md:grid-cols-3 gap-4" ]
-                [ div [ class "md:col-span-2" ]
-                    [ label [ for "new-routine-title", class "sr-only" ] [ text "Nome da Rotina" ]
-                    , input
-                        [ type_ "text"
-                        , id "new-routine-title"
-                        , placeholder "Ex: Beber 2L de água, Fazer academia..."
-                        , value model.routineTitleInput
-                        , onInput InputRoutineTitle
-                        , class "w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 text-slate-800"
-                        ]
-                        []
-                    ]
-                , div []
-                    [ label [ for "new-routine-recurrence", class "sr-only" ] [ text "Recorrência" ]
-                    , select
-                        [ id "new-routine-recurrence"
-                        , value model.routineRecurrenceInput
-                        , onInput InputRoutineRecurrence
-                        , class "w-full border border-slate-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 text-slate-800"
-                        ]
-                        [ option [ value "Diária" ] [ text "Diária" ]
-                        , option [ value "Semanal" ] [ text "Semanal" ]
-                        , option [ value "Mensal" ] [ text "Mensal" ]
-                        ]
-                    ]
+        [ div [ class "flex flex-col sm:flex-row sm:items-center justify-between gap-4" ]
+            [ div []
+                [ h2 [ class "text-2xl font-bold text-slate-800" ] [ text "Minhas Rotinas" ]
+                , p [ class "text-slate-600 text-sm mt-1" ] [ text "Defina tarefas recorrentes e crie instâncias delas na lista principal com um clique." ]
                 ]
-            , div [ class "flex justify-end" ]
-                [ button
-                    [ type_ "submit"
-                    , class "bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2 rounded-lg transition-colors shadow-sm"
-                    ]
-                    [ text "Criar Rotina" ]
+            , a
+                [ href "/rotinas/nova"
+                , id "btn-nova-rotina"
+                , class "bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2.5 rounded-lg transition-colors shadow-sm text-sm flex items-center justify-center gap-2 cursor-pointer no-underline self-start sm:self-auto"
+                ]
+                [ span [ class "material-symbols-outlined", style "font-size" "18px" ] [ text "add" ]
+                , text "Criar Rotina"
                 ]
             ]
         , -- Routines List
@@ -94,5 +66,59 @@ viewRoutineItem routine =
             ]
             [ span [ class "material-symbols-outlined", style "font-size" "18px" ] [ text "add" ]
             , text "Gerar Tarefa"
+            ]
+        ]
+
+
+viewNovaRotina : Model -> Html Msg
+viewNovaRotina model =
+    div [ class "space-y-6 max-w-xl mx-auto" ]
+        [ -- Title & Description
+          div []
+            [ h2 [ class "text-2xl font-bold text-slate-800" ] [ text "Criar Nova Rotina" ]
+            , p [ class "text-slate-600 text-sm mt-1" ] [ text "Defina o nome da rotina e sua frequência." ]
+            ]
+        , -- Add Routine Form Card
+          div [ class "bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4" ]
+            [ Html.form [ onSubmit CreateRoutine, class "space-y-4" ]
+                [ div []
+                    [ label [ for "new-routine-title", class "block text-sm font-semibold text-slate-700 mb-1" ] [ text "Nome da Rotina" ]
+                    , input
+                        [ type_ "text"
+                        , id "new-routine-title"
+                        , placeholder "Ex: Beber 2L de água, Fazer academia..."
+                        , value model.routineTitleInput
+                        , onInput InputRoutineTitle
+                        , class "w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 text-slate-800"
+                        , autofocus True
+                        ]
+                        []
+                    ]
+                , div []
+                    [ label [ for "new-routine-recurrence", class "block text-sm font-semibold text-slate-700 mb-1" ] [ text "Recorrência" ]
+                    , select
+                        [ id "new-routine-recurrence"
+                        , value model.routineRecurrenceInput
+                        , onInput InputRoutineRecurrence
+                        , class "w-full border border-slate-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 text-slate-800"
+                        ]
+                        [ option [ value "Diária" ] [ text "Diária" ]
+                        , option [ value "Semanal" ] [ text "Semanal" ]
+                        , option [ value "Mensal" ] [ text "Mensal" ]
+                        ]
+                    ]
+                , div [ class "flex items-center justify-end gap-3 pt-2" ]
+                    [ a
+                        [ href "/rotinas"
+                        , class "px-5 py-2 rounded-lg border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors text-center text-sm no-underline"
+                        ]
+                        [ text "Cancelar" ]
+                    , button
+                        [ type_ "submit"
+                        , class "bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2 rounded-lg transition-colors shadow-sm text-sm"
+                        ]
+                        [ text "Criar Rotina" ]
+                    ]
+                ]
             ]
         ]
