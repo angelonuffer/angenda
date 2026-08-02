@@ -207,10 +207,47 @@ update msg model =
                             tasksToArchive
                                 |> List.map (\t -> Ports.saveTask (Task.encodeTask { t | archived = True }))
                                 |> Cmd.batch
+
+                        -- Automatic task generation for daily routines
+                        dailyRoutinesToUpdate =
+                            List.filter (\r -> r.recurrence == "Diária" && not r.archived && r.lastGeneratedDate < model.today) payload.routines
+
+                        updatedRoutinesList =
+                            List.map
+                                (\r ->
+                                    if r.recurrence == "Diária" && not r.archived && r.lastGeneratedDate < model.today then
+                                        { r | lastGeneratedDate = model.today }
+                                    else
+                                        r
+                                )
+                                payload.routines
+
+                        newGeneratedTasks =
+                            List.indexedMap
+                                (\idx r ->
+                                    { id = "task_routine_" ++ r.id ++ "_" ++ String.fromInt (List.length payload.tasks + idx) ++ "_" ++ model.today
+                                    , title = r.title
+                                    , completed = False
+                                    , origin = "rotina:" ++ r.title
+                                    , createdAt = "Rotina (" ++ r.recurrence ++ ")"
+                                    , history = []
+                                    , archived = False
+                                    , date = model.today
+                                    }
+                                )
+                                dailyRoutinesToUpdate
+
+                        generationCmds =
+                            List.concat
+                                [ List.map (\r -> Ports.saveRoutine (Routine.encodeRoutine { r | lastGeneratedDate = model.today })) dailyRoutinesToUpdate
+                                , List.map (\t -> Ports.saveTask (Task.encodeTask t)) newGeneratedTasks
+                                ]
+                                |> Cmd.batch
+
                     in
                     ( { model
-                        | tasks = archivedTasks
-                        , routines = payload.routines
+                        | tasks = archivedTasks ++ newGeneratedTasks
+                        , routines = updatedRoutinesList
                         , plans = payload.plans
                         , taskTitleInput = newTitleInput
                         , taskDateInput = newDateInput
@@ -220,7 +257,7 @@ update msg model =
                         , planDescInput = newPlanDescInput
                         , planDeadlineInput = newPlanDeadlineInput
                       }
-                    , archiveCmds
+                    , Cmd.batch [ archiveCmds, generationCmds ]
                     )
 
                 Err _ ->
@@ -698,18 +735,46 @@ update msg model =
                         "routine_" ++ String.fromInt (List.length model.routines) ++ "_" ++ model.routineTitleInput
                         |> String.replace " " "_"
 
+                    isDaily =
+                        model.routineRecurrenceInput == "Diária"
+
                     newRoutine =
                         { id = newId
                         , title = model.routineTitleInput
                         , recurrence = model.routineRecurrenceInput
                         , archived = False
+                        , lastGeneratedDate = if isDaily then model.today else ""
                         }
+
+                    maybeNewTask =
+                        if isDaily then
+                            Just
+                                { id = "task_routine_" ++ newId ++ "_0_" ++ model.today
+                                , title = model.routineTitleInput
+                                , completed = False
+                                , origin = "rotina:" ++ model.routineTitleInput
+                                , createdAt = "Rotina (" ++ model.routineRecurrenceInput ++ ")"
+                                , history = []
+                                , archived = False
+                                , date = model.today
+                                }
+                        else
+                            Nothing
+
+                    cmds =
+                        case maybeNewTask of
+                            Just newTask ->
+                                [ Ports.saveRoutine (Routine.encodeRoutine newRoutine)
+                                , Ports.saveTask (Task.encodeTask newTask)
+                                , Nav.pushUrl model.key "/rotinas"
+                                ]
+                            Nothing ->
+                                [ Ports.saveRoutine (Routine.encodeRoutine newRoutine)
+                                , Nav.pushUrl model.key "/rotinas"
+                                ]
                 in
-                ( { model | routines = model.routines ++ [ newRoutine ], routineTitleInput = "", routineRecurrenceInput = "Diária" }
-                , Cmd.batch
-                    [ Ports.saveRoutine (Routine.encodeRoutine newRoutine)
-                    , Nav.pushUrl model.key "/rotinas"
-                    ]
+                ( { model | routines = model.routines ++ [ newRoutine ], tasks = model.tasks ++ (maybeNewTask |> Maybe.map List.singleton |> Maybe.withDefault []), routineTitleInput = "", routineRecurrenceInput = "Diária" }
+                , Cmd.batch cmds
                 )
 
         SaveEditedRoutine id ->
@@ -728,27 +793,61 @@ update msg model =
                 case maybeRoutine of
                     Just routine ->
                         let
+                            isDaily =
+                                model.routineRecurrenceInput == "Diária"
+
+                            needsNewTask =
+                                isDaily && routine.lastGeneratedDate < model.today
+
                             updatedRoutine =
-                                { routine | title = trimmedTitle, recurrence = model.routineRecurrenceInput }
+                                { routine
+                                | title = trimmedTitle
+                                , recurrence = model.routineRecurrenceInput
+                                , lastGeneratedDate = if needsNewTask then model.today else routine.lastGeneratedDate
+                                }
 
                             updatedRoutines =
                                 List.map
                                     (\r ->
                                         if r.id == id then
                                             updatedRoutine
-
                                         else
                                             r
                                     )
                                     model.routines
+
+                            maybeNewTask =
+                                if needsNewTask then
+                                    Just
+                                        { id = "task_routine_" ++ routine.id ++ "_" ++ String.fromInt (List.length model.tasks) ++ "_" ++ model.today
+                                        , title = trimmedTitle
+                                        , completed = False
+                                        , origin = "rotina:" ++ trimmedTitle
+                                        , createdAt = "Rotina (" ++ model.routineRecurrenceInput ++ ")"
+                                        , history = []
+                                        , archived = False
+                                        , date = model.today
+                                        }
+                                else
+                                    Nothing
+
+                            cmds =
+                                case maybeNewTask of
+                                    Just newTask ->
+                                        [ Ports.saveRoutine (Routine.encodeRoutine updatedRoutine)
+                                        , Ports.saveTask (Task.encodeTask newTask)
+                                        , Nav.pushUrl model.key "/rotinas"
+                                        ]
+                                    Nothing ->
+                                        [ Ports.saveRoutine (Routine.encodeRoutine updatedRoutine)
+                                        , Nav.pushUrl model.key "/rotinas"
+                                        ]
                         in
                         ( { model
                             | routines = updatedRoutines
+                            , tasks = model.tasks ++ (maybeNewTask |> Maybe.map List.singleton |> Maybe.withDefault [])
                           }
-                        , Cmd.batch
-                            [ Ports.saveRoutine (Routine.encodeRoutine updatedRoutine)
-                            , Nav.pushUrl model.key "/rotinas"
-                            ]
+                        , Cmd.batch cmds
                         )
 
                     Nothing ->
