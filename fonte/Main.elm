@@ -12,7 +12,7 @@ import Json.Decode as Decode
 import Pages.Arquivo exposing (viewArquivo)
 import Pages.NovaTarefa exposing (viewNovaTarefa)
 import Pages.Planos exposing (viewPlanos, viewNovoPlano, viewEditarPlano)
-import Pages.Rotinas exposing (viewRotinas)
+import Pages.Rotinas exposing (viewRotinas, viewNovaRotina)
 import Pages.Tarefas exposing (viewTarefas)
 import Ports
 import Route exposing (Route(..))
@@ -91,6 +91,14 @@ update msg model =
                         _ ->
                             ( "", "" )
 
+                ( newRoutineTitleInput, newRoutineRecurrenceInput ) =
+                    case newRoute of
+                        AdicionarRotina ->
+                            ( model.routineTitleInput, model.routineRecurrenceInput )
+
+                        _ ->
+                            ( "", "Diária" )
+
                 ( newPlanTitleInput, newPlanDescInput, newPlanDeadlineInput ) =
                     case newRoute of
                         AdicionarPlano ->
@@ -115,6 +123,8 @@ update msg model =
                 | route = newRoute
                 , taskTitleInput = newTitleInput
                 , taskDateInput = newDateInput
+                , routineTitleInput = newRoutineTitleInput
+                , routineRecurrenceInput = newRoutineRecurrenceInput
                 , planTitleInput = newPlanTitleInput
                 , planDescInput = newPlanDescInput
                 , planDeadlineInput = newPlanDeadlineInput
@@ -142,6 +152,14 @@ update msg model =
 
                                 _ ->
                                     ( model.taskTitleInput, model.taskDateInput )
+
+                        ( newRoutineTitleInput, newRoutineRecurrenceInput ) =
+                            case model.route of
+                                AdicionarRotina ->
+                                    ( model.routineTitleInput, model.routineRecurrenceInput )
+
+                                _ ->
+                                    ( model.routineTitleInput, model.routineRecurrenceInput )
 
                         ( newPlanTitleInput, newPlanDescInput, newPlanDeadlineInput ) =
                             case model.route of
@@ -185,6 +203,8 @@ update msg model =
                         , plans = payload.plans
                         , taskTitleInput = newTitleInput
                         , taskDateInput = newDateInput
+                        , routineTitleInput = newRoutineTitleInput
+                        , routineRecurrenceInput = newRoutineRecurrenceInput
                         , planTitleInput = newPlanTitleInput
                         , planDescInput = newPlanDescInput
                         , planDeadlineInput = newPlanDeadlineInput
@@ -673,8 +693,11 @@ update msg model =
                         , recurrence = model.routineRecurrenceInput
                         }
                 in
-                ( { model | routines = model.routines ++ [ newRoutine ], routineTitleInput = "" }
-                , Ports.saveRoutine (Routine.encodeRoutine newRoutine)
+                ( { model | routines = model.routines ++ [ newRoutine ], routineTitleInput = "", routineRecurrenceInput = "Diária" }
+                , Cmd.batch
+                    [ Ports.saveRoutine (Routine.encodeRoutine newRoutine)
+                    , Nav.pushUrl model.key "/rotinas"
+                    ]
                 )
 
         DeleteRoutineAction id ->
@@ -1057,6 +1080,9 @@ view model =
                         Rotinas ->
                             viewRotinas model
 
+                        AdicionarRotina ->
+                            viewNovaRotina model
+
                         Planos ->
                             viewPlanos model
 
@@ -1113,7 +1139,17 @@ viewSidebar model =
                 _ ->
                     False
             )
-        , viewDrawerLink "/rotinas" "repeat" "Rotinas" (currentRoute == Rotinas)
+        , viewDrawerLink "/rotinas" "repeat" "Rotinas"
+            (case currentRoute of
+                Rotinas ->
+                    True
+
+                AdicionarRotina ->
+                    True
+
+                _ ->
+                    False
+            )
         , viewDrawerLink "/arquivo" "archive" "Arquivo" (currentRoute == Arquivo)
         ]
 
@@ -1196,7 +1232,17 @@ viewHeader model =
                             _ ->
                                 False
                         )
-                    , viewDrawerLink "/rotinas" "repeat" "Rotinas" (currentRoute == Rotinas)
+        , viewDrawerLink "/rotinas" "repeat" "Rotinas"
+            (case currentRoute of
+                Rotinas ->
+                    True
+
+                AdicionarRotina ->
+                    True
+
+                _ ->
+                    False
+            )
                     , viewDrawerLink "/arquivo" "archive" "Arquivo" (currentRoute == Arquivo)
                     ]
                 ]

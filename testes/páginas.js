@@ -34,13 +34,20 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
   // Step 2: Navigate to Rotinas and create a routine
   console.log('Navigating to /rotinas to pre-populate routines...');
   await page.goto('/rotinas');
-  await page.waitForSelector('#new-routine-title', { timeout: 10000 });
 
+  await page.waitForSelector('#btn-nova-rotina', { timeout: 10000 });
+  await page.click('#btn-nova-rotina');
+
+  await page.waitForSelector('#new-routine-title', { timeout: 10000 });
   await page.fill('#new-routine-title', 'Fazer exercícios físicos');
   await page.selectOption('#new-routine-recurrence', 'Diária');
   await page.click('button[type="submit"]');
   await page.waitForTimeout(200);
 
+  await page.waitForSelector('#btn-nova-rotina', { timeout: 10000 });
+  await page.click('#btn-nova-rotina');
+
+  await page.waitForSelector('#new-routine-title', { timeout: 10000 });
   await page.fill('#new-routine-title', 'Limpar área de trabalho');
   await page.selectOption('#new-routine-recurrence', 'Semanal');
   await page.click('button[type="submit"]');
@@ -145,6 +152,7 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
     'tarefas/nova',
     'tarefas/editar/task_0_Comprar_mantimentos_para_a_semana',
     'rotinas',
+    'rotinas/nova',
     'planos',
     'planos/novo',
     'planos/editar/plan_0_Lançar_novo_website_pessoal',
