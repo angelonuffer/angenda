@@ -8,6 +8,7 @@ type Route
     = Tarefas
     | Rotinas
     | AdicionarRotina
+    | EditarRotina String
     | Planos
     | AdicionarTarefa (Maybe String)
     | EditarTarefa String
@@ -26,6 +27,7 @@ routeParser =
         , Parser.map EditarTarefa (Parser.s "tarefas" </> Parser.s "editar" </> Parser.string)
         , Parser.map Rotinas (Parser.s "rotinas")
         , Parser.map AdicionarRotina (Parser.s "rotinas" </> Parser.s "nova")
+        , Parser.map EditarRotina (Parser.s "rotinas" </> Parser.s "editar" </> Parser.string)
         , Parser.map Planos (Parser.s "planos")
         , Parser.map AdicionarPlano (Parser.s "planos" </> Parser.s "novo")
         , Parser.map EditarPlano (Parser.s "planos" </> Parser.s "editar" </> Parser.string)
