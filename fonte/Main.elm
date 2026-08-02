@@ -13,7 +13,7 @@ import Pages.Arquivo exposing (viewArquivo)
 import Pages.NovaTarefa exposing (viewNovaTarefa)
 import Pages.Planos exposing (viewPlanos, viewNovoPlano, viewEditarPlano)
 import Pages.Rotinas exposing (viewRotinas, viewNovaRotina)
-import Pages.Tarefas exposing (viewTarefas)
+import Pages.Tarefas exposing (viewTarefas, DateRecord, parseDate, prevDay, toAbsoluteDays, weekdayIndex, weekdayStr, dateRecordToString)
 import Ports
 import Route exposing (Route(..))
 import Types exposing (Model, Msg(..))
@@ -59,6 +59,51 @@ init today url key =
 
 
 -- UPDATE
+
+
+getWeeklyTaskDate : String -> String -> List String -> Maybe String
+getWeeklyTaskDate todayStr lastGenDateStr selectedDays =
+    if List.isEmpty selectedDays then
+        Nothing
+    else
+        let
+            todayRecordM = parseDate todayStr
+            lastGenRecordM = parseDate lastGenDateStr
+        in
+        case (todayRecordM, lastGenRecordM) of
+            (Just todayRec, Just lastGenRec) ->
+                let
+                    todayAbs = toAbsoluteDays todayRec
+                    lastGenAbs = toAbsoluteDays lastGenRec
+
+                    checkDate : DateRecord -> Int -> Maybe String
+                    checkDate currentRec currentAbs =
+                        if currentAbs <= lastGenAbs then
+                            Nothing
+                        else
+                            let
+                                wDay = weekdayStr (weekdayIndex currentRec)
+                            in
+                            if List.member wDay selectedDays then
+                                Just (dateRecordToString currentRec)
+                            else
+                                checkDate (prevDay currentRec) (currentAbs - 1)
+                in
+                checkDate todayRec todayAbs
+
+            (Just todayRec, Nothing) ->
+                -- fallback: just check today
+                let
+                    wDay = weekdayStr (weekdayIndex todayRec)
+                in
+                if List.member wDay selectedDays then
+                    Just todayStr
+                else
+                    Nothing
+
+            _ ->
+                Nothing
+
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -222,41 +267,58 @@ update msg model =
                                 |> List.map (\t -> Ports.saveTask (Task.encodeTask { t | archived = True }))
                                 |> Cmd.batch
 
-                        -- Automatic task generation for daily routines
-                        dailyRoutinesToUpdate =
-                            List.filter (\r -> r.recurrence == "Diária" && not r.archived && r.lastGeneratedDate < model.today) payload.routines
-
-                        updatedRoutinesList =
-                            List.map
-                                (\r ->
-                                    if r.recurrence == "Diária" && not r.archived && r.lastGeneratedDate < model.today then
-                                        { r | lastGeneratedDate = model.today }
+                        -- Automatic task generation for routines
+                        ( updatedRoutinesList, newGeneratedTasks, generationCmds ) =
+                            let
+                                processRoutine : Routine -> ( Routine, Maybe Task, Maybe (Cmd Msg) )
+                                processRoutine r =
+                                    if r.archived then
+                                        ( r, Nothing, Nothing )
+                                    else if r.recurrence == "Diária" && r.lastGeneratedDate < model.today then
+                                        let
+                                            newTask =
+                                                { id = "task_routine_" ++ r.id ++ "_" ++ String.fromInt (List.length payload.tasks) ++ "_" ++ model.today
+                                                , title = r.title
+                                                , completed = False
+                                                , origin = "rotina:" ++ r.title
+                                                , createdAt = "Rotina (" ++ r.recurrence ++ ")"
+                                                , history = []
+                                                , archived = False
+                                                , date = model.today
+                                                }
+                                            updatedR = { r | lastGeneratedDate = model.today }
+                                            cmd = Cmd.batch [ Ports.saveRoutine (Routine.encodeRoutine updatedR), Ports.saveTask (Task.encodeTask newTask) ]
+                                        in
+                                        ( updatedR, Just newTask, Just cmd )
+                                    else if r.recurrence == "Semanal" then
+                                        case getWeeklyTaskDate model.today r.lastGeneratedDate r.selectedDays of
+                                            Just tDate ->
+                                                let
+                                                    newTask =
+                                                        { id = "task_routine_" ++ r.id ++ "_" ++ String.fromInt (List.length payload.tasks) ++ "_" ++ model.today
+                                                        , title = r.title
+                                                        , completed = False
+                                                        , origin = "rotina:" ++ r.title
+                                                        , createdAt = "Rotina (" ++ r.recurrence ++ ")"
+                                                        , history = []
+                                                        , archived = False
+                                                        , date = tDate
+                                                        }
+                                                    updatedR = { r | lastGeneratedDate = model.today }
+                                                    cmd = Cmd.batch [ Ports.saveRoutine (Routine.encodeRoutine updatedR), Ports.saveTask (Task.encodeTask newTask) ]
+                                                in
+                                                ( updatedR, Just newTask, Just cmd )
+                                            Nothing ->
+                                                ( r, Nothing, Nothing )
                                     else
-                                        r
-                                )
-                                payload.routines
+                                        ( r, Nothing, Nothing )
 
-                        newGeneratedTasks =
-                            List.indexedMap
-                                (\idx r ->
-                                    { id = "task_routine_" ++ r.id ++ "_" ++ String.fromInt (List.length payload.tasks + idx) ++ "_" ++ model.today
-                                    , title = r.title
-                                    , completed = False
-                                    , origin = "rotina:" ++ r.title
-                                    , createdAt = "Rotina (" ++ r.recurrence ++ ")"
-                                    , history = []
-                                    , archived = False
-                                    , date = model.today
-                                    }
-                                )
-                                dailyRoutinesToUpdate
-
-                        generationCmds =
-                            List.concat
-                                [ List.map (\r -> Ports.saveRoutine (Routine.encodeRoutine { r | lastGeneratedDate = model.today })) dailyRoutinesToUpdate
-                                , List.map (\t -> Ports.saveTask (Task.encodeTask t)) newGeneratedTasks
-                                ]
-                                |> Cmd.batch
+                                results = List.map processRoutine payload.routines
+                                rList = List.map (\( r, _, _ ) -> r) results
+                                tList = List.filterMap (\( _, mT, _ ) -> mT) results
+                                cList = List.filterMap (\( _, _, mC ) -> mC) results
+                            in
+                            ( rList, tList, Cmd.batch cList )
 
                     in
                     ( { model
@@ -763,29 +825,51 @@ update msg model =
                     isDaily =
                         model.routineRecurrenceInput == "Diária"
 
+                    isWeekly =
+                        model.routineRecurrenceInput == "Semanal"
+
+                    ( initialLastGenDate, initialTaskDate ) =
+                        if isDaily then
+                            ( model.today, Just model.today )
+                        else if isWeekly then
+                            case parseDate model.today of
+                                Just td ->
+                                    let
+                                        todayStr = weekdayStr (weekdayIndex td)
+                                    in
+                                    if List.member todayStr model.routineSelectedDaysInput then
+                                        ( model.today, Just model.today )
+                                    else
+                                        ( model.today, Nothing ) -- mark today as lastGen to track forward, no task today
+                                Nothing ->
+                                    ( model.today, Nothing )
+                        else
+                            ( "", Nothing )
+
                     newRoutine =
                         { id = newId
                         , title = model.routineTitleInput
                         , recurrence = model.routineRecurrenceInput
                         , archived = False
-                        , lastGeneratedDate = if isDaily then model.today else ""
+                        , lastGeneratedDate = initialLastGenDate
                         , selectedDays = model.routineSelectedDaysInput
                         }
 
                     maybeNewTask =
-                        if isDaily then
-                            Just
-                                { id = "task_routine_" ++ newId ++ "_0_" ++ model.today
-                                , title = model.routineTitleInput
-                                , completed = False
-                                , origin = "rotina:" ++ model.routineTitleInput
-                                , createdAt = "Rotina (" ++ model.routineRecurrenceInput ++ ")"
-                                , history = []
-                                , archived = False
-                                , date = model.today
-                                }
-                        else
-                            Nothing
+                        case initialTaskDate of
+                            Just tDate ->
+                                Just
+                                    { id = "task_routine_" ++ newId ++ "_0_" ++ model.today
+                                    , title = model.routineTitleInput
+                                    , completed = False
+                                    , origin = "rotina:" ++ model.routineTitleInput
+                                    , createdAt = "Rotina (" ++ model.routineRecurrenceInput ++ ")"
+                                    , history = []
+                                    , archived = False
+                                    , date = tDate
+                                    }
+                            Nothing ->
+                                Nothing
 
                     cmds =
                         case maybeNewTask of
@@ -822,14 +906,26 @@ update msg model =
                             isDaily =
                                 model.routineRecurrenceInput == "Diária"
 
-                            needsNewTask =
-                                isDaily && routine.lastGeneratedDate < model.today
+                            isWeekly =
+                                model.routineRecurrenceInput == "Semanal"
+
+                            ( needsNewTask, taskDateForNew, newLastGenDate ) =
+                                if isDaily && routine.lastGeneratedDate < model.today then
+                                    ( True, Just model.today, model.today )
+                                else if isWeekly then
+                                    case getWeeklyTaskDate model.today routine.lastGeneratedDate model.routineSelectedDaysInput of
+                                        Just d ->
+                                            ( True, Just d, model.today )
+                                        Nothing ->
+                                            ( False, Nothing, if routine.lastGeneratedDate == "" then model.today else routine.lastGeneratedDate )
+                                else
+                                    ( False, Nothing, routine.lastGeneratedDate )
 
                             updatedRoutine =
                                 { routine
                                 | title = trimmedTitle
                                 , recurrence = model.routineRecurrenceInput
-                                , lastGeneratedDate = if needsNewTask then model.today else routine.lastGeneratedDate
+                                , lastGeneratedDate = newLastGenDate
                                 , selectedDays = model.routineSelectedDaysInput
                                 }
 
@@ -844,19 +940,20 @@ update msg model =
                                     model.routines
 
                             maybeNewTask =
-                                if needsNewTask then
-                                    Just
-                                        { id = "task_routine_" ++ routine.id ++ "_" ++ String.fromInt (List.length model.tasks) ++ "_" ++ model.today
-                                        , title = trimmedTitle
-                                        , completed = False
-                                        , origin = "rotina:" ++ trimmedTitle
-                                        , createdAt = "Rotina (" ++ model.routineRecurrenceInput ++ ")"
-                                        , history = []
-                                        , archived = False
-                                        , date = model.today
-                                        }
-                                else
-                                    Nothing
+                                case taskDateForNew of
+                                    Just d ->
+                                        Just
+                                            { id = "task_routine_" ++ routine.id ++ "_" ++ String.fromInt (List.length model.tasks) ++ "_" ++ model.today
+                                            , title = trimmedTitle
+                                            , completed = False
+                                            , origin = "rotina:" ++ trimmedTitle
+                                            , createdAt = "Rotina (" ++ model.routineRecurrenceInput ++ ")"
+                                            , history = []
+                                            , archived = False
+                                            , date = d
+                                            }
+                                    Nothing ->
+                                        Nothing
 
                             cmds =
                                 case maybeNewTask of

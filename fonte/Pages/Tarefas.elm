@@ -1,4 +1,4 @@
-module Pages.Tarefas exposing (viewTarefas, viewDateBadge)
+module Pages.Tarefas exposing (viewTarefas, viewDateBadge, DateRecord, parseDate, toAbsoluteDays, weekdayIndex, prevDay, dateRecordToString, weekdayStr)
 
 import Data.Task exposing (Task)
 import Dict exposing (Dict)
@@ -72,6 +72,57 @@ weekdayIndex date =
 
         _ ->
             0
+
+
+weekdayStr : Int -> String
+weekdayStr idx =
+    case idx of
+        0 -> "Seg"
+        1 -> "Ter"
+        2 -> "Qua"
+        3 -> "Qui"
+        4 -> "Sex"
+        5 -> "Sáb"
+        6 -> "Dom"
+        _ -> ""
+
+
+daysInMonth : Int -> Int -> Int
+daysInMonth y m =
+    case m of
+        2 ->
+            if (modBy 4 y == 0 && modBy 100 y /= 0) || (modBy 400 y == 0) then
+                29
+            else
+                28
+
+        4 -> 30
+        6 -> 30
+        9 -> 30
+        11 -> 30
+        _ -> 31
+
+
+prevDay : DateRecord -> DateRecord
+prevDay date =
+    if date.day > 1 then
+        { date | day = date.day - 1 }
+    else
+        let
+            prevMonth = if date.month == 1 then 12 else date.month - 1
+            prevYear = if date.month == 1 then date.year - 1 else date.year
+            daysInPrevMonth = daysInMonth prevYear prevMonth
+        in
+        { year = prevYear, month = prevMonth, day = daysInPrevMonth }
+
+
+dateRecordToString : DateRecord -> String
+dateRecordToString date =
+    String.fromInt date.year
+        ++ "-"
+        ++ String.padLeft 2 '0' (String.fromInt date.month)
+        ++ "-"
+        ++ String.padLeft 2 '0' (String.fromInt date.day)
 
 
 isNextMonth : DateRecord -> DateRecord -> Bool

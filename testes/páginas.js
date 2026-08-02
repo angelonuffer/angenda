@@ -49,7 +49,7 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
 
   await page.waitForSelector('#new-routine-title', { timeout: 10000 });
   await page.fill('#new-routine-title', 'Limpar área de trabalho');
-  await page.selectOption('#new-routine-recurrence', 'Semanal');
+  await page.selectOption('#new-routine-recurrence', 'Mensal');
   await page.click('button[type="submit"]');
   await page.waitForTimeout(200);
 
