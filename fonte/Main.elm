@@ -92,14 +92,25 @@ getWeeklyTaskDate todayStr lastGenDateStr selectedDays =
                 checkDate todayRec todayAbs
 
             (Just todayRec, Nothing) ->
-                -- fallback: just check today
+                -- If lastGeneratedDate is missing (e.g. newly created routine),
+                -- find the most recent selected day within the past week (up to 7 days ago).
                 let
-                    wDay = weekdayStr (weekdayIndex todayRec)
+                    todayAbs = toAbsoluteDays todayRec
+
+                    checkDate : DateRecord -> Int -> Int -> Maybe String
+                    checkDate currentRec currentAbs daysChecked =
+                        if daysChecked >= 7 then
+                            Nothing
+                        else
+                            let
+                                wDay = weekdayStr (weekdayIndex currentRec)
+                            in
+                            if List.member wDay selectedDays then
+                                Just (dateRecordToString currentRec)
+                            else
+                                checkDate (prevDay currentRec) (currentAbs - 1) (daysChecked + 1)
                 in
-                if List.member wDay selectedDays then
-                    Just todayStr
-                else
-                    Nothing
+                checkDate todayRec todayAbs 0
 
             _ ->
                 Nothing
@@ -832,17 +843,11 @@ update msg model =
                         if isDaily then
                             ( model.today, Just model.today )
                         else if isWeekly then
-                            case parseDate model.today of
-                                Just td ->
-                                    let
-                                        todayStr = weekdayStr (weekdayIndex td)
-                                    in
-                                    if List.member todayStr model.routineSelectedDaysInput then
-                                        ( model.today, Just model.today )
-                                    else
-                                        ( model.today, Nothing ) -- mark today as lastGen to track forward, no task today
+                            case getWeeklyTaskDate model.today "" model.routineSelectedDaysInput of
+                                Just tDate ->
+                                    ( model.today, Just tDate )
                                 Nothing ->
-                                    ( model.today, Nothing )
+                                    ( model.today, Nothing ) -- mark today as lastGen to track forward, no task today
                         else
                             ( "", Nothing )
 
