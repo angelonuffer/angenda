@@ -4,6 +4,7 @@ import Data.Routine exposing (Routine)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
+import Route exposing (Route(..))
 import Types exposing (Model, Msg(..))
 
 
@@ -46,13 +47,21 @@ viewRoutineItem routine =
         [ div [ class "space-y-2" ]
             [ div [ class "flex items-start justify-between gap-4" ]
                 [ h4 [ class "font-bold text-lg text-slate-800" ] [ text routine.title ]
-                , button
-                    [ type_ "button"
-                    , onClick (DeleteRoutineAction routine.id)
-                    , class "text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-all flex items-center justify-center"
-                    , title "Excluir Rotina"
+                , div [ class "flex items-center gap-1" ]
+                    [ a
+                        [ href <| "/rotinas/editar/" ++ routine.id
+                        , class "text-slate-400 hover:text-amber-600 p-1.5 rounded-lg hover:bg-amber-50 transition-all flex items-center justify-center cursor-pointer no-underline"
+                        , title "Editar Rotina"
+                        ]
+                        [ span [ class "material-symbols-outlined", style "font-size" "18px" ] [ text "edit" ] ]
+                    , button
+                        [ type_ "button"
+                        , onClick (DeleteRoutineAction routine.id)
+                        , class "text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-all flex items-center justify-center"
+                        , title "Excluir Rotina"
+                        ]
+                        [ span [ class "material-symbols-outlined", style "font-size" "18px" ] [ text "delete" ] ]
                     ]
-                    [ span [ class "material-symbols-outlined", style "font-size" "18px" ] [ text "delete" ] ]
                 ]
             , div [ class "flex items-center gap-1.5" ]
                 [ span [ class "material-symbols-outlined text-red-500", style "font-size" "18px" ] [ text "repeat" ]
@@ -72,15 +81,32 @@ viewRoutineItem routine =
 
 viewNovaRotina : Model -> Html Msg
 viewNovaRotina model =
+    let
+        config =
+            case model.route of
+                Route.EditarRotina id ->
+                    { pageTitle = "Editar Rotina"
+                    , pageDesc = "Edite o nome da rotina e sua frequência."
+                    , submitMsg = SaveEditedRoutine id
+                    , buttonText = "Salvar"
+                    }
+
+                _ ->
+                    { pageTitle = "Criar Nova Rotina"
+                    , pageDesc = "Defina o nome da rotina e sua frequência."
+                    , submitMsg = CreateRoutine
+                    , buttonText = "Criar Rotina"
+                    }
+    in
     div [ class "space-y-6 max-w-xl mx-auto" ]
         [ -- Title & Description
           div []
-            [ h2 [ class "text-2xl font-bold text-slate-800" ] [ text "Criar Nova Rotina" ]
-            , p [ class "text-slate-600 text-sm mt-1" ] [ text "Defina o nome da rotina e sua frequência." ]
+            [ h2 [ class "text-2xl font-bold text-slate-800" ] [ text config.pageTitle ]
+            , p [ class "text-slate-600 text-sm mt-1" ] [ text config.pageDesc ]
             ]
         , -- Add Routine Form Card
           div [ class "bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4" ]
-            [ Html.form [ onSubmit CreateRoutine, class "space-y-4" ]
+            [ Html.form [ onSubmit config.submitMsg, class "space-y-4" ]
                 [ div []
                     [ label [ for "new-routine-title", class "block text-sm font-semibold text-slate-700 mb-1" ] [ text "Nome da Rotina" ]
                     , input
@@ -117,7 +143,7 @@ viewNovaRotina model =
                         [ type_ "submit"
                         , class "bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2 rounded-lg transition-colors shadow-sm text-sm"
                         ]
-                        [ text "Criar Rotina" ]
+                        [ text config.buttonText ]
                     ]
                 ]
             ]

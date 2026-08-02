@@ -55,6 +55,7 @@ type Msg
     | ArchiveTask String
     | RestoreTask String
     | CreateRoutine
+    | SaveEditedRoutine String
     | DeleteRoutineAction String
     | GenerateTaskFromRoutine Routine
     | CreatePlan

@@ -96,6 +96,17 @@ update msg model =
                         AdicionarRotina ->
                             ( model.routineTitleInput, model.routineRecurrenceInput )
 
+                        Route.EditarRotina id ->
+                            let
+                                maybeRoutine =
+                                    model.routines
+                                        |> List.filter (\r -> r.id == id)
+                                        |> List.head
+                            in
+                            ( maybeRoutine |> Maybe.map .title |> Maybe.withDefault ""
+                            , maybeRoutine |> Maybe.map .recurrence |> Maybe.withDefault "Diária"
+                            )
+
                         _ ->
                             ( "", "Diária" )
 
@@ -700,6 +711,48 @@ update msg model =
                     ]
                 )
 
+        SaveEditedRoutine id ->
+            let
+                trimmedTitle =
+                    String.trim model.routineTitleInput
+            in
+            if trimmedTitle == "" then
+                ( model, Cmd.none )
+
+            else
+                let
+                    maybeRoutine =
+                        List.filter (\r -> r.id == id) model.routines |> List.head
+                in
+                case maybeRoutine of
+                    Just routine ->
+                        let
+                            updatedRoutine =
+                                { routine | title = trimmedTitle, recurrence = model.routineRecurrenceInput }
+
+                            updatedRoutines =
+                                List.map
+                                    (\r ->
+                                        if r.id == id then
+                                            updatedRoutine
+
+                                        else
+                                            r
+                                    )
+                                    model.routines
+                        in
+                        ( { model
+                            | routines = updatedRoutines
+                          }
+                        , Cmd.batch
+                            [ Ports.saveRoutine (Routine.encodeRoutine updatedRoutine)
+                            , Nav.pushUrl model.key "/rotinas"
+                            ]
+                        )
+
+                    Nothing ->
+                        ( model, Cmd.none )
+
         DeleteRoutineAction id ->
             ( { model | routines = List.filter (\r -> r.id /= id) model.routines }
             , Ports.deleteRoutine id
@@ -1083,6 +1136,9 @@ view model =
                         AdicionarRotina ->
                             viewNovaRotina model
 
+                        Route.EditarRotina _ ->
+                            viewNovaRotina model
+
                         Planos ->
                             viewPlanos model
 
@@ -1145,6 +1201,9 @@ viewSidebar model =
                     True
 
                 AdicionarRotina ->
+                    True
+
+                Route.EditarRotina _ ->
                     True
 
                 _ ->
@@ -1238,6 +1297,9 @@ viewHeader model =
                     True
 
                 AdicionarRotina ->
+                    True
+
+                Route.EditarRotina _ ->
                     True
 
                 _ ->
