@@ -67,9 +67,14 @@ viewRoutineItem routine =
                         [ span [ class "material-symbols-outlined", style "font-size" "18px" ] [ text "archive" ] ]
                     ]
                 ]
-            , div [ class "flex items-center gap-1.5" ]
+            , div [ class "flex items-center gap-1.5 flex-wrap" ]
                 [ span [ class "material-symbols-outlined text-red-500", style "font-size" "18px" ] [ text "repeat" ]
                 , span [ class "text-xs font-semibold text-red-600 uppercase tracking-wider" ] [ text routine.recurrence ]
+                , if routine.recurrence == "Semanal" && not (List.isEmpty routine.selectedDays) then
+                    span [ class "text-xs font-medium text-slate-500 ml-2" ]
+                        [ text ("(" ++ String.join ", " routine.selectedDays ++ ")") ]
+                  else
+                    text ""
                 ]
             ]
         , if routine.recurrence == "Diária" then
@@ -143,6 +148,34 @@ viewNovaRotina model =
                         , option [ value "Mensal" ] [ text "Mensal" ]
                         ]
                     ]
+                , if model.routineRecurrenceInput == "Semanal" then
+                    div []
+                        [ label [ class "block text-sm font-semibold text-slate-700 mb-2" ] [ text "Dias da Semana" ]
+                        , div [ class "flex flex-wrap gap-2" ]
+                            (List.map
+                                (\day ->
+                                    let
+                                        isSelected =
+                                            List.member day model.routineSelectedDaysInput
+
+                                        btnClass =
+                                            if isSelected then
+                                                "bg-red-600 text-white border-red-600"
+                                            else
+                                                "bg-white text-slate-600 border-slate-300 hover:bg-slate-50"
+                                    in
+                                    button
+                                        [ type_ "button"
+                                        , onClick (ToggleRoutineDay day)
+                                        , class ("px-3 py-1.5 rounded border text-sm font-medium transition-colors " ++ btnClass)
+                                        ]
+                                        [ text day ]
+                                )
+                                [ "Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb" ]
+                            )
+                        ]
+                  else
+                    text ""
                 , div [ class "flex items-center justify-end gap-3 pt-2" ]
                     [ a
                         [ href "/rotinas"

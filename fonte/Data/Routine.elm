@@ -10,6 +10,7 @@ type alias Routine =
     , recurrence : String -- "Diária", "Semanal", "Mensal"
     , archived : Bool
     , lastGeneratedDate : String
+    , selectedDays : List String
     }
 
 
@@ -21,6 +22,7 @@ encodeRoutine routine =
         , ( "recurrence", Encode.string routine.recurrence )
         , ( "archived", Encode.bool routine.archived )
         , ( "lastGeneratedDate", Encode.string routine.lastGeneratedDate )
+        , ( "selectedDays", Encode.list Encode.string routine.selectedDays )
         ]
 
 
@@ -32,3 +34,4 @@ routineDecoder =
         |> Decode.andThen (\f -> Decode.map f (Decode.field "recurrence" Decode.string))
         |> Decode.andThen (\f -> Decode.map f (Decode.oneOf [ Decode.field "archived" Decode.bool, Decode.succeed False ]))
         |> Decode.andThen (\f -> Decode.map f (Decode.oneOf [ Decode.field "lastGeneratedDate" Decode.string, Decode.succeed "" ]))
+        |> Decode.andThen (\f -> Decode.map f (Decode.oneOf [ Decode.field "selectedDays" (Decode.list Decode.string), Decode.succeed [] ]))
