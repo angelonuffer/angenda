@@ -1276,17 +1276,28 @@ viewHeader model =
             model.route
     in
     header [ class "bg-red-700 text-white shadow-md relative z-30" ]
-        [ div [ class "max-w-5xl w-full mx-auto px-4 py-3 flex items-center gap-4" ]
-            [ button
-                [ onClick ToggleDrawer
-                , class "p-1.5 rounded-md hover:bg-red-600 focus:outline-none flex items-center justify-center text-white md:hidden"
-                , title "Menu"
+        [ div [ class "max-w-5xl w-full mx-auto px-4 py-3 flex items-center justify-between" ]
+            [ div [ class "flex items-center gap-4" ]
+                [ button
+                    [ onClick ToggleDrawer
+                    , class "p-1.5 rounded-md hover:bg-red-600 focus:outline-none flex items-center justify-center text-white md:hidden"
+                    , title "Menu"
+                    ]
+                    [ span [ class "material-symbols-outlined", style "font-size" "28px" ] [ text "menu" ] ]
+                , a [ href "/tarefas", class "flex items-center gap-2 cursor-pointer text-white no-underline" ]
+                    [ img [ src "/brand-icon.png", class "w-8 h-8 object-contain" ] []
+                    , h1 [ class "text-2xl font-bold tracking-tight" ] [ text "Angenda" ]
+                    ]
                 ]
-                [ span [ class "material-symbols-outlined", style "font-size" "28px" ] [ text "menu" ] ]
-            , a [ href "/tarefas", class "flex items-center gap-2 cursor-pointer text-white no-underline" ]
-                [ img [ src "/brand-icon.png", class "w-8 h-8 object-contain" ] []
-                , h1 [ class "text-2xl font-bold tracking-tight" ] [ text "Angenda" ]
+            , iframe
+                [ src "https://kapivatar.net/perfil-autenticado"
+                , style "width" "40px"
+                , style "height" "40px"
+                , style "border" "none"
+                , style "border-radius" "50%"
+                , class "bg-white overflow-hidden"
                 ]
+                []
             ]
         , -- Backdrop overlay when drawer is open
           if model.drawerOpen then
