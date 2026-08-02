@@ -27,7 +27,11 @@ viewRotinas model =
             ]
         , -- Routines List
           div [ class "grid grid-cols-1 md:grid-cols-2 gap-4" ]
-            [ if List.isEmpty model.routines then
+            [ let
+                activeRoutines =
+                    List.filter (\r -> not r.archived) model.routines
+              in
+              if List.isEmpty activeRoutines then
                 div [ class "col-span-full bg-white p-12 text-center space-y-3 rounded-xl border border-slate-200 shadow-sm" ]
                     [ span [ class "material-symbols-outlined text-slate-300 text-5xl block mx-auto" ] [ text "autorenew" ]
                     , h3 [ class "text-lg font-medium text-slate-700" ] [ text "Nenhuma rotina configurada" ]
@@ -36,7 +40,7 @@ viewRotinas model =
 
               else
                 div [ class "col-span-full grid grid-cols-1 md:grid-cols-2 gap-4" ]
-                    (List.map viewRoutineItem model.routines)
+                    (List.map viewRoutineItem activeRoutines)
             ]
         ]
 
@@ -56,11 +60,11 @@ viewRoutineItem routine =
                         [ span [ class "material-symbols-outlined", style "font-size" "18px" ] [ text "edit" ] ]
                     , button
                         [ type_ "button"
-                        , onClick (DeleteRoutineAction routine.id)
-                        , class "text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-all flex items-center justify-center"
-                        , title "Excluir Rotina"
+                        , onClick (ArchiveRoutine routine.id)
+                        , class "text-slate-400 hover:text-amber-600 p-1.5 rounded-lg hover:bg-amber-50 transition-all flex items-center justify-center"
+                        , title "Arquivar Rotina"
                         ]
-                        [ span [ class "material-symbols-outlined", style "font-size" "18px" ] [ text "delete" ] ]
+                        [ span [ class "material-symbols-outlined", style "font-size" "18px" ] [ text "archive" ] ]
                     ]
                 ]
             , div [ class "flex items-center gap-1.5" ]

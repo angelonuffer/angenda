@@ -1,6 +1,7 @@
 module Pages.Arquivo exposing (viewArquivo)
 
 import Data.Plan exposing (Plan)
+import Data.Routine exposing (Routine)
 import Data.Task exposing (Task)
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -11,6 +12,7 @@ import Types exposing (Model, Msg(..))
 type ArchivedItem
     = ArchivedTask Task
     | ArchivedPlan Plan
+    | ArchivedRoutine Routine
 
 
 viewArquivo : Model -> Html Msg
@@ -24,8 +26,12 @@ viewArquivo model =
             List.filter .archived model.plans
                 |> List.map ArchivedPlan
 
+        archivedRoutines =
+            List.filter .archived model.routines
+                |> List.map ArchivedRoutine
+
         allArchivedItems =
-            archivedTasks ++ archivedPlans
+            archivedTasks ++ archivedPlans ++ archivedRoutines
     in
     div [ class "space-y-6" ]
         [ -- Title & Description
@@ -59,6 +65,9 @@ viewArchivedItem item =
 
         ArchivedPlan plan ->
             viewArchivedPlanItem plan
+
+        ArchivedRoutine routine ->
+            viewArchivedRoutineItem routine
 
 
 viewArchivedTaskItem : Task -> Html Msg
@@ -121,6 +130,34 @@ viewArchivedPlanItem plan =
                 , onClick (RestorePlan plan.id)
                 , class "text-slate-400 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 transition-all flex items-center justify-center"
                 , title "Restaurar Plano"
+                ]
+                [ span [ class "material-symbols-outlined", style "font-size" "20px" ] [ text "unarchive" ] ]
+            ]
+        ]
+
+
+viewArchivedRoutineItem : Routine -> Html Msg
+viewArchivedRoutineItem routine =
+    li [ class "p-4 flex items-center justify-between gap-4 hover:bg-slate-50 transition-colors" ]
+        [ div [ class "flex items-start gap-3 flex-1" ]
+            [ div [ class "mt-1 text-slate-400 flex items-center justify-center" ]
+                [ span [ class "material-symbols-outlined", style "font-size" "20px" ] [ text "repeat" ] ]
+            , div [ class "space-y-1" ]
+                [ p [ class "font-medium text-slate-800" ] [ text routine.title ]
+                , div [ class "flex flex-wrap items-center gap-2" ]
+                    [ span [ class "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-semibold bg-red-50 text-red-700 border border-red-100" ]
+                        [ span [ class "material-symbols-outlined", style "font-size" "12px" ] [ text "repeat" ]
+                        , text "Rotina"
+                        ]
+                    ]
+                ]
+            ]
+        , div [ class "flex items-center gap-1" ]
+            [ button
+                [ type_ "button"
+                , onClick (RestoreRoutine routine.id)
+                , class "text-slate-400 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 transition-all flex items-center justify-center"
+                , title "Restaurar Rotina"
                 ]
                 [ span [ class "material-symbols-outlined", style "font-size" "20px" ] [ text "unarchive" ] ]
             ]

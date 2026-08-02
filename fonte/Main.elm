@@ -702,6 +702,7 @@ update msg model =
                         { id = newId
                         , title = model.routineTitleInput
                         , recurrence = model.routineRecurrenceInput
+                        , archived = False
                         }
                 in
                 ( { model | routines = model.routines ++ [ newRoutine ], routineTitleInput = "", routineRecurrenceInput = "Diária" }
@@ -753,10 +754,63 @@ update msg model =
                     Nothing ->
                         ( model, Cmd.none )
 
-        DeleteRoutineAction id ->
-            ( { model | routines = List.filter (\r -> r.id /= id) model.routines }
-            , Ports.deleteRoutine id
-            )
+        ArchiveRoutine id ->
+            let
+                updatedRoutines =
+                    List.map
+                        (\r ->
+                            if r.id == id then
+                                { r | archived = True }
+
+                            else
+                                r
+                        )
+                        model.routines
+
+                maybeRoutine =
+                    List.filter (\r -> r.id == id) model.routines |> List.head
+            in
+            case maybeRoutine of
+                Just routine ->
+                    let
+                        updatedRoutine =
+                            { routine | archived = True }
+                    in
+                    ( { model | routines = updatedRoutines }
+                    , Ports.saveRoutine (Routine.encodeRoutine updatedRoutine)
+                    )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
+        RestoreRoutine id ->
+            let
+                updatedRoutines =
+                    List.map
+                        (\r ->
+                            if r.id == id then
+                                { r | archived = False }
+
+                            else
+                                r
+                        )
+                        model.routines
+
+                maybeRoutine =
+                    List.filter (\r -> r.id == id) model.routines |> List.head
+            in
+            case maybeRoutine of
+                Just routine ->
+                    let
+                        updatedRoutine =
+                            { routine | archived = False }
+                    in
+                    ( { model | routines = updatedRoutines }
+                    , Ports.saveRoutine (Routine.encodeRoutine updatedRoutine)
+                    )
+
+                Nothing ->
+                    ( model, Cmd.none )
 
         GenerateTaskFromRoutine routine ->
             let
