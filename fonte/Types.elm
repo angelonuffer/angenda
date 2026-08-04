@@ -29,6 +29,12 @@ type alias Model =
     , newPlanTaskTitle : String
     , today : String
     , drawerOpen : Bool
+    -- MQTT Sync State
+    , mqttBrokerUrl : String
+    , mqttTopic : String
+    , mqttEncryptionKey : String
+    , mqttStatus : String
+    , lastSyncTimestamp : Maybe String
     }
 
 
@@ -49,6 +55,12 @@ type Msg
     | InputPlanDesc String
     | InputPlanDeadline String
     | InputPlanTaskTitle String
+    -- MQTT Sync Inputs & Actions
+    | InputMqttBrokerUrl String
+    | InputMqttTopic String
+    | InputMqttEncryptionKey String
+    | TriggerMqttSync
+    | GenerateMqttTopic
     -- Actions
     | CreateTask
     | SaveEditedTask String

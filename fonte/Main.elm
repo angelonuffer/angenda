@@ -13,6 +13,7 @@ import Pages.Arquivo exposing (viewArquivo)
 import Pages.NovaTarefa exposing (viewNovaTarefa)
 import Pages.Planos exposing (viewPlanos, viewNovoPlano, viewEditarPlano)
 import Pages.Rotinas exposing (viewRotinas, viewNovaRotina)
+import Pages.Sincronizar exposing (viewSincronizar)
 import Pages.Tarefas exposing (viewTarefas)
 import Ports
 import Route exposing (Route(..))
@@ -53,6 +54,11 @@ init today url key =
       , newPlanTaskTitle = ""
       , today = today
       , drawerOpen = False
+      , mqttBrokerUrl = "wss://broker.hivemq.com:8884/mqtt"
+      , mqttTopic = "angenda/sync/dispositivo_demo_123"
+      , mqttEncryptionKey = "chave_secreta_demo"
+      , mqttStatus = "Conectado"
+      , lastSyncTimestamp = Just "Hoje, 06:00"
       }
     , Ports.loadData ()
     )
@@ -317,6 +323,21 @@ update msg model =
 
         InputPlanTaskTitle val ->
             ( { model | newPlanTaskTitle = val }, Cmd.none )
+
+        InputMqttBrokerUrl val ->
+            ( { model | mqttBrokerUrl = val }, Cmd.none )
+
+        InputMqttTopic val ->
+            ( { model | mqttTopic = val }, Cmd.none )
+
+        InputMqttEncryptionKey val ->
+            ( { model | mqttEncryptionKey = val }, Cmd.none )
+
+        TriggerMqttSync ->
+            ( { model | mqttStatus = "Sincronizado", lastSyncTimestamp = Just "Agora mesmo" }, Ports.loadData () )
+
+        GenerateMqttTopic ->
+            ( { model | mqttTopic = "angenda/sync/dispositivo_" ++ model.today ++ "_77" }, Cmd.none )
 
         CreateTask ->
             if String.trim model.taskTitleInput == "" then
@@ -1330,6 +1351,9 @@ view model =
 
                         Arquivo ->
                             viewArquivo model
+
+                        Route.Sincronizar ->
+                            viewSincronizar model
                     ]
                 ]
             , viewFooter
@@ -1390,6 +1414,7 @@ viewSidebar model =
                     False
             )
         , viewDrawerLink "/arquivo" "archive" "Arquivo" (currentRoute == Arquivo)
+        , viewDrawerLink "/sincronizar" "sync" "Sincronizar" (currentRoute == Route.Sincronizar)
         ]
 
 
@@ -1497,6 +1522,7 @@ viewHeader model =
                     False
             )
                     , viewDrawerLink "/arquivo" "archive" "Arquivo" (currentRoute == Arquivo)
+                    , viewDrawerLink "/sincronizar" "sync" "Sincronizar" (currentRoute == Route.Sincronizar)
                     ]
                 ]
 

@@ -156,7 +156,8 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
     'planos',
     'planos/novo',
     'planos/editar/plan_0_Lançar_novo_website_pessoal',
-    'arquivo'
+    'arquivo',
+    'sincronizar'
   ];
 
   for (const route of routes) {
