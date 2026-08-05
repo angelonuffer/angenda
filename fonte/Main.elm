@@ -57,6 +57,7 @@ init today url key =
       , mqttBrokerUrl = "wss://broker.hivemq.com:8884/mqtt"
       , mqttTopic = ""
       , mqttEncryptionKey = ""
+      , mqttDeviceName = ""
       , mqttStatus = "Conectado"
       , lastSyncTimestamp = Just "Hoje, 06:00"
       }
@@ -332,6 +333,9 @@ update msg model =
 
         InputMqttEncryptionKey val ->
             ( { model | mqttEncryptionKey = val }, Cmd.none )
+
+        InputMqttDeviceName val ->
+            ( { model | mqttDeviceName = val }, Cmd.none )
 
         TriggerMqttSync ->
             ( { model | mqttStatus = "Sincronizado", lastSyncTimestamp = Just "Agora mesmo" }, Ports.loadData () )

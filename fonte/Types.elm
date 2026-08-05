@@ -33,6 +33,7 @@ type alias Model =
     , mqttBrokerUrl : String
     , mqttTopic : String
     , mqttEncryptionKey : String
+    , mqttDeviceName : String
     , mqttStatus : String
     , lastSyncTimestamp : Maybe String
     }
@@ -59,6 +60,7 @@ type Msg
     | InputMqttBrokerUrl String
     | InputMqttTopic String
     | InputMqttEncryptionKey String
+    | InputMqttDeviceName String
     | TriggerMqttSync
     | GenerateMqttTopic
     | ReceiveUuid String

@@ -47,7 +47,22 @@ viewSincronizar model =
                     , h3 [ class "font-bold text-slate-800 text-lg" ] [ text "Configuração de Pareamento MQTT" ]
                     ]
                 , div [ class "space-y-4" ]
-                    [ -- Broker URL Field
+                    [ -- Device Name Field
+                      div []
+                        [ label [ class "block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5" ]
+                            [ text "Nome do Dispositivo" ]
+                        , input
+                            [ type_ "text"
+                            , id "mqtt-device-name-input"
+                            , value model.mqttDeviceName
+                            , onInput InputMqttDeviceName
+                            , placeholder "Ex: Meu Celular"
+                            , class "w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-slate-800 transition-all"
+                            ] []
+                        , p [ class "text-xs text-slate-500 mt-1" ]
+                            [ text "Identifique este dispositivo na rede." ]
+                        ]
+                    , -- Broker URL Field
                       div []
                         [ label [ class "block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5" ]
                             [ text "Servidor Broker MQTT (WebSocket)" ]
