@@ -76,10 +76,7 @@ init flagsValue url key =
       , mqttEncryptionKey = ""
       , mqttDeviceName = ""
       , mqttStatus = "Desconectado"
-      , mqttConnections =
-          [ { deviceName = "Meu Celular", lastSync = "Agora mesmo" }
-          , { deviceName = "Notebook Casa", lastSync = "10 min atrás" }
-          ]
+      , mqttConnections = []
       , uuidPool = initialUuids
       }
     , Ports.loadData ()
