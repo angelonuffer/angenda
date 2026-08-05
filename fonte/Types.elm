@@ -30,6 +30,7 @@ type alias Model =
     , today : String
     , drawerOpen : Bool
     -- MQTT Sync State
+    , mqttSyncEnabled : Bool
     , mqttBrokerUrl : String
     , mqttTopic : String
     , mqttEncryptionKey : String
@@ -61,6 +62,7 @@ type Msg
     | InputMqttTopic String
     | InputMqttEncryptionKey String
     | InputMqttDeviceName String
+    | ToggleMqttSync
     | TriggerMqttSync
     | GenerateMqttTopic
     | ReceiveUuid String

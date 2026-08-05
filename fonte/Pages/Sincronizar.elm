@@ -42,9 +42,20 @@ viewSincronizar model =
           div [ class "grid grid-cols-1 lg:grid-cols-3 gap-6" ]
             [ -- MQTT Settings Form Card (Takes 2 Columns)
               div [ class "lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-5" ]
-                [ div [ class "flex items-center gap-2 border-b border-slate-100 pb-3" ]
-                    [ span [ class "material-symbols-outlined text-red-700" ] [ text "settings_remote" ]
-                    , h3 [ class "font-bold text-slate-800 text-lg" ] [ text "Configuração de Pareamento MQTT" ]
+                [ div [ class "flex items-center justify-between border-b border-slate-100 pb-3" ]
+                    [ div [ class "flex items-center gap-2" ]
+                        [ span [ class "material-symbols-outlined text-red-700" ] [ text "settings_remote" ]
+                        , h3 [ class "font-bold text-slate-800 text-lg" ] [ text "Configuração de Pareamento MQTT" ]
+                        ]
+                    , button
+                        [ type_ "button"
+                        , onClick ToggleMqttSync
+                        , class <| "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 " ++ (if model.mqttSyncEnabled then "bg-red-600" else "bg-slate-200")
+                        ]
+                        [ span
+                            [ class <| "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out " ++ (if model.mqttSyncEnabled then "translate-x-5" else "translate-x-0")
+                            ] []
+                        ]
                     ]
                 , div [ class "space-y-4" ]
                     [ -- Device Name Field

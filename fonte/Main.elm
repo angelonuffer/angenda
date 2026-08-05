@@ -54,12 +54,13 @@ init today url key =
       , newPlanTaskTitle = ""
       , today = today
       , drawerOpen = False
+      , mqttSyncEnabled = False
       , mqttBrokerUrl = "wss://broker.hivemq.com:8884/mqtt"
       , mqttTopic = ""
       , mqttEncryptionKey = ""
       , mqttDeviceName = ""
-      , mqttStatus = "Conectado"
-      , lastSyncTimestamp = Just "Hoje, 06:00"
+      , mqttStatus = "Desconectado"
+      , lastSyncTimestamp = Nothing
       }
     , Ports.loadData ()
     )
@@ -336,6 +337,16 @@ update msg model =
 
         InputMqttDeviceName val ->
             ( { model | mqttDeviceName = val }, Cmd.none )
+
+        ToggleMqttSync ->
+            let
+                newStatus =
+                    if model.mqttSyncEnabled then
+                        "Desconectado"
+                    else
+                        "Conectando..."
+            in
+            ( { model | mqttSyncEnabled = not model.mqttSyncEnabled, mqttStatus = newStatus }, Cmd.none )
 
         TriggerMqttSync ->
             ( { model | mqttStatus = "Sincronizado", lastSyncTimestamp = Just "Agora mesmo" }, Ports.loadData () )
