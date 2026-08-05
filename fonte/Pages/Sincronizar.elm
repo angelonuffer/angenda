@@ -172,14 +172,9 @@ viewSincronizar model =
                             [ span [ class "text-slate-500 text-xs" ] [ text "Protocolo:" ]
                             , span [ class "font-mono font-medium text-slate-700 text-xs bg-slate-100 px-2 py-0.5 rounded w-fit" ] [ text "MQTT v3.1.1 (WSS)" ]
                             ]
-                        , div [ class "flex flex-col gap-1 py-1.5 border-b border-slate-50" ]
+                        , div [ class "flex flex-col gap-1 py-1.5" ]
                             [ span [ class "text-slate-500 text-xs" ] [ text "Criptografia:" ]
                             , span [ class "font-semibold text-slate-700 text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded border border-amber-200 w-fit" ] [ text "AES-256-GCM" ]
-                            ]
-                        , div [ class "flex flex-col gap-1 py-1.5" ]
-                            [ span [ class "text-slate-500 text-xs" ] [ text "Última Sincronia:" ]
-                            , span [ class "font-medium text-slate-700 text-xs" ]
-                                [ text (Maybe.withDefault "Nenhuma recente" model.lastSyncTimestamp) ]
                             ]
                         ]
                     ]
@@ -187,6 +182,23 @@ viewSincronizar model =
                     [ span [ class "material-symbols-outlined text-slate-400 shrink-0", style "font-size" "20px" ] [ text "info" ]
                     , text "Os dados são sincronizados em tempo real sempre que ocorrem alterações no aplicativo."
                     ]
+                ]
+            ]
+        , -- Connections List
+          div [ class "space-y-3" ]
+            [ h3 [ class "font-bold text-slate-800 text-base flex items-center gap-2" ]
+                [ span [ class "material-symbols-outlined text-slate-500", style "font-size" "20px" ] [ text "devices" ]
+                , text "Dispositivos Conectados"
+                ]
+            , div [ class "bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden" ]
+                [ if List.isEmpty model.mqttConnections then
+                    div [ class "p-8 text-center flex flex-col items-center justify-center" ]
+                        [ span [ class "material-symbols-outlined text-slate-300 mb-2", style "font-size" "48px" ] [ text "device_unknown" ]
+                        , p [ class "text-slate-500 text-sm" ] [ text "Nenhum dispositivo conectado no momento." ]
+                        ]
+                  else
+                    div [ class "divide-y divide-slate-100" ]
+                        (List.map viewConnection model.mqttConnections)
                 ]
             ]
         , -- Stats / Data Summary in Sync
@@ -214,4 +226,23 @@ viewStatCard iconName label textValue colorClasses =
             [ p [ class "text-2xl font-bold text-slate-900 leading-none" ] [ text textValue ]
             , p [ class "text-xs font-medium text-slate-500 mt-1" ] [ text label ]
             ]
+        ]
+
+
+viewConnection : { deviceName : String, lastSync : String } -> Html Msg
+viewConnection conn =
+    div [ class "p-4 flex items-center justify-between hover:bg-slate-50 transition-colors" ]
+        [ div [ class "flex items-center gap-3" ]
+            [ div [ class "w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0" ]
+                [ span [ class "material-symbols-outlined", style "font-size" "20px" ] [ text "smartphone" ] ]
+            , div []
+                [ p [ class "font-semibold text-slate-800 text-sm" ] [ text conn.deviceName ]
+                , p [ class "text-xs text-slate-500 flex items-center gap-1 mt-0.5" ]
+                    [ span [ class "material-symbols-outlined", style "font-size" "14px" ] [ text "sync" ]
+                    , text ("Última sincronia: " ++ conn.lastSync)
+                    ]
+                ]
+            ]
+        , span [ class "px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full" ]
+            [ text "Online" ]
         ]

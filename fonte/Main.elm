@@ -60,7 +60,10 @@ init today url key =
       , mqttEncryptionKey = ""
       , mqttDeviceName = ""
       , mqttStatus = "Desconectado"
-      , lastSyncTimestamp = Nothing
+      , mqttConnections = 
+          [ { deviceName = "Meu Celular", lastSync = "Agora mesmo" }
+          , { deviceName = "Notebook Casa", lastSync = "10 min atrás" }
+          ]
       }
     , Ports.loadData ()
     )
@@ -349,7 +352,11 @@ update msg model =
             ( { model | mqttSyncEnabled = not model.mqttSyncEnabled, mqttStatus = newStatus }, Cmd.none )
 
         TriggerMqttSync ->
-            ( { model | mqttStatus = "Sincronizado", lastSyncTimestamp = Just "Agora mesmo" }, Ports.loadData () )
+            let
+                updatedConnections =
+                    List.map (\c -> { c | lastSync = "Agora mesmo" }) model.mqttConnections
+            in
+            ( { model | mqttStatus = "Sincronizado", mqttConnections = updatedConnections }, Ports.loadData () )
 
         GenerateMqttTopic ->
             ( model, Ports.requestUuid () )

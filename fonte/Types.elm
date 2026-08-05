@@ -36,7 +36,7 @@ type alias Model =
     , mqttEncryptionKey : String
     , mqttDeviceName : String
     , mqttStatus : String
-    , lastSyncTimestamp : Maybe String
+    , mqttConnections : List { deviceName : String, lastSync : String }
     }
 
 
