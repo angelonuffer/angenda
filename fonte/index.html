@@ -153,8 +153,37 @@
         let mqttClient = null;
         let mqttConnectionsMap = new Map();
         let appConfig = null;
+        let syncTimes = {};
         let mainApp = null; // To hold Elm app reference
         const SESSION_ID = window.crypto.randomUUID(); // Id único para evitar conflito de abas com mesmo nome
+
+        function saveConfigSyncTimes() {
+            if (!appConfig) return;
+            appConfig.syncTimes = syncTimes;
+            saveItem('config', appConfig).catch(err => console.error('Error saving syncTimes:', err));
+        }
+
+        async function sendModifiedSince(lastSyncTime) {
+            if (!mqttClient || !appConfig || !appConfig.mqttSyncEnabled) return;
+            const topic = 'angenda/' + appConfig.mqttTopic;
+            const sendModified = async (storeName) => {
+                const items = await getAllItems(storeName);
+                for (const item of items) {
+                    if ((item.updatedAt || 0) > lastSyncTime) {
+                        mqttClient.publish(topic, JSON.stringify({
+                            device: appConfig.mqttDeviceName || 'Dispositivo Anônimo',
+                            sessionId: SESSION_ID,
+                            type: storeName,
+                            action: 'save',
+                            payload: item
+                        }));
+                    }
+                }
+            };
+            await sendModified('tasks');
+            await sendModified('routines');
+            await sendModified('plans');
+        }
 
         function publishMqttMessage(type, action, payload) {
             if (mqttClient && appConfig && appConfig.mqttSyncEnabled) {
@@ -190,6 +219,14 @@
                 if (mainApp && mainApp.ports.mqttStatusUpdate) mainApp.ports.mqttStatusUpdate.send('Conectado');
                 const topic = 'angenda/' + config.mqttTopic;
                 mqttClient.subscribe(topic);
+                
+                // Handshake inicial ao conectar
+                mqttClient.publish(topic, JSON.stringify({
+                    device: config.mqttDeviceName || 'Dispositivo Anônimo',
+                    sessionId: SESSION_ID,
+                    type: 'sync',
+                    action: 'hello'
+                }));
             });
 
             mqttClient.on('error', (err) => {
@@ -213,6 +250,30 @@
                     }));
                     if (mainApp && mainApp.ports.mqttConnectionsUpdate) {
                         mainApp.ports.mqttConnectionsUpdate.send(connectionsList);
+                    }
+
+                    if (data.type === 'sync') {
+                        if (data.action === 'hello') {
+                            const lastSyncTime = syncTimes[deviceLabel] || 0;
+                            await sendModifiedSince(lastSyncTime);
+                            syncTimes[deviceLabel] = Date.now();
+                            saveConfigSyncTimes();
+                            
+                            const replyTopic = 'angenda/' + appConfig.mqttTopic;
+                            mqttClient.publish(replyTopic, JSON.stringify({
+                                device: appConfig.mqttDeviceName || 'Dispositivo Anônimo',
+                                sessionId: SESSION_ID,
+                                type: 'sync',
+                                action: 'hello_ack',
+                                targetSession: data.sessionId
+                            }));
+                        } else if (data.action === 'hello_ack' && data.targetSession === SESSION_ID) {
+                            const lastSyncTime = syncTimes[deviceLabel] || 0;
+                            await sendModifiedSince(lastSyncTime);
+                            syncTimes[deviceLabel] = Date.now();
+                            saveConfigSyncTimes();
+                        }
+                        return; // O payload de handshake não precisa do resto do processamento
                     }
 
                     const storeName = data.type; // 'tasks', 'routines', 'plans'
@@ -275,7 +336,11 @@
 
             // Load initial config if any
             getAllItems('config').then(configs => {
-                if (configs.length > 0) setupMqtt(configs[0]);
+                if (configs.length > 0) {
+                    const cfg = configs[0];
+                    syncTimes = cfg.syncTimes || {};
+                    setupMqtt(cfg);
+                }
             }).catch(() => {});
 
             // Handle loadData command
@@ -404,7 +469,8 @@
                 app.ports.saveConfig.subscribe(async (config) => {
                     try {
                         // We use a fixed ID for the config since there's only one
-                        const configToSave = { ...config, id: 'main_config' };
+                        // Preserve existing syncTimes
+                        const configToSave = { ...config, id: 'main_config', syncTimes: syncTimes };
                         await saveItem('config', configToSave);
                         console.log('Config saved to IndexedDB');
                         setupMqtt(configToSave);
