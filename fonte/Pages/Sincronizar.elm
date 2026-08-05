@@ -6,6 +6,14 @@ import Html.Events exposing (..)
 import Types exposing (Model, Msg(..))
 
 
+isConfigValid : Model -> Bool
+isConfigValid model =
+    (String.length (String.trim model.mqttDeviceName) > 0)
+        && (String.length (String.trim model.mqttBrokerUrl) > 0)
+        && (String.length (String.trim model.mqttTopic) > 0)
+        && (String.length model.mqttEncryptionKey >= 8)
+
+
 viewSincronizar : Model -> Html Msg
 viewSincronizar model =
     let
@@ -47,14 +55,25 @@ viewSincronizar model =
                         [ span [ class "material-symbols-outlined text-red-700" ] [ text "settings_remote" ]
                         , h3 [ class "font-bold text-slate-800 text-lg" ] [ text "Configuração de Pareamento MQTT" ]
                         ]
-                    , button
-                        [ type_ "button"
-                        , onClick ToggleMqttSync
-                        , class <| "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 " ++ (if model.mqttSyncEnabled then "bg-red-600" else "bg-slate-200")
-                        ]
-                        [ span
-                            [ class <| "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out " ++ (if model.mqttSyncEnabled then "translate-x-5" else "translate-x-0")
-                            ] []
+                    , let
+                        canActivate =
+                            model.mqttSyncEnabled || isConfigValid model
+                      in
+                      div [ class "flex items-center gap-3" ]
+                        [ if not canActivate then
+                            span [ class "text-xs text-red-500 font-medium hidden sm:block" ] [ text "Preencha tudo (senha mín. 8 caracteres) para ativar" ]
+                          else
+                            text ""
+                        , button
+                            [ type_ "button"
+                            , disabled (not canActivate)
+                            , onClick ToggleMqttSync
+                            , class <| "relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 " ++ (if not canActivate then "opacity-50 cursor-not-allowed bg-slate-200" else if model.mqttSyncEnabled then "cursor-pointer bg-red-600" else "cursor-pointer bg-slate-200")
+                            ]
+                            [ span
+                                [ class <| "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out " ++ (if model.mqttSyncEnabled then "translate-x-5" else "translate-x-0")
+                                ] []
+                            ]
                         ]
                     ]
                 , div [ class "space-y-4" ]
