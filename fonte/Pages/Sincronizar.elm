@@ -86,8 +86,9 @@ viewSincronizar model =
                             , id "mqtt-device-name-input"
                             , value model.mqttDeviceName
                             , onInput InputMqttDeviceName
+                            , disabled model.mqttSyncEnabled
                             , placeholder "Ex: Meu Celular"
-                            , class "w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-slate-800 transition-all"
+                            , class <| "w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-slate-800 transition-all" ++ (if model.mqttSyncEnabled then " opacity-60 cursor-not-allowed" else "")
                             ] []
                         , p [ class "text-xs text-slate-500 mt-1" ]
                             [ text "Identifique este dispositivo na rede." ]
@@ -101,8 +102,9 @@ viewSincronizar model =
                             , id "mqtt-broker-input"
                             , value model.mqttBrokerUrl
                             , onInput InputMqttBrokerUrl
+                            , disabled model.mqttSyncEnabled
                             , placeholder "wss://broker.hivemq.com:8884/mqtt"
-                            , class "w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-slate-800 transition-all"
+                            , class <| "w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-slate-800 transition-all" ++ (if model.mqttSyncEnabled then " opacity-60 cursor-not-allowed" else "")
                             ] []
                         , p [ class "text-xs text-slate-500 mt-1" ]
                             [ text "Endereço WebSocket com suporte a TLS/SSL do seu broker MQTT." ]
@@ -117,12 +119,14 @@ viewSincronizar model =
                                 , id "mqtt-topic-input"
                                 , value model.mqttTopic
                                 , onInput InputMqttTopic
-                                , class "flex-1 px-3.5 py-2.5 text-sm font-mono bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-slate-800 transition-all"
+                                , disabled model.mqttSyncEnabled
+                                , class <| "flex-1 px-3.5 py-2.5 text-sm font-mono bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-slate-800 transition-all" ++ (if model.mqttSyncEnabled then " opacity-60 cursor-not-allowed" else "")
                                 ] []
                             , button
                                 [ onClick GenerateMqttTopic
                                 , type_ "button"
-                                , class "px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs rounded-lg transition-colors flex items-center gap-1 shrink-0 border border-slate-300"
+                                , disabled model.mqttSyncEnabled
+                                , class <| "px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs rounded-lg transition-colors flex items-center gap-1 shrink-0 border border-slate-300" ++ (if model.mqttSyncEnabled then " opacity-60 cursor-not-allowed" else "")
                                 ]
                                 [ span [ class "material-symbols-outlined", style "font-size" "16px" ] [ text "autorenew" ]
                                 , text "Gerar"
@@ -140,8 +144,9 @@ viewSincronizar model =
                             , id "mqtt-key-input"
                             , value model.mqttEncryptionKey
                             , onInput InputMqttEncryptionKey
+                            , disabled model.mqttSyncEnabled
                             , placeholder ""
-                            , class "w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-slate-800 transition-all"
+                            , class <| "w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-slate-800 transition-all" ++ (if model.mqttSyncEnabled then " opacity-60 cursor-not-allowed" else "")
                             ] []
                         , p [ class "text-xs text-slate-500 mt-1" ]
                             [ text "Sua senha pessoal para decifrar os dados. Nunca é enviada ao broker." ]
