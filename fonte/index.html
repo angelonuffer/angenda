@@ -73,6 +73,9 @@
                     if (!dbInstance.objectStoreNames.contains('plans')) {
                         dbInstance.createObjectStore('plans', { keyPath: 'id' });
                     }
+                    if (!dbInstance.objectStoreNames.contains('config')) {
+                        dbInstance.createObjectStore('config', { keyPath: 'id' });
+                    }
                 };
 
                 request.onsuccess = (event) => {
@@ -164,21 +167,24 @@
                         const tasks = await getAllItems('tasks');
                         const routines = await getAllItems('routines');
                         const plans = await getAllItems('plans');
+                        const configs = await getAllItems('config');
+                        const config = configs.length > 0 ? configs[0] : null;
 
-                        console.log('Loaded from DB:', { tasks, routines, plans });
+                        console.log('Loaded from DB:', { tasks, routines, plans, config });
 
                         if (app.ports.dataLoaded) {
                             app.ports.dataLoaded.send({
                                 tasks: tasks || [],
                                 routines: routines || [],
-                                plans: plans || []
+                                plans: plans || [],
+                                config: config
                             });
                         }
                     } catch (err) {
                         console.error('Error loading data from IndexedDB:', err);
                         // Fallback empty load
                         if (app.ports.dataLoaded) {
-                            app.ports.dataLoaded.send({ tasks: [], routines: [], plans: [] });
+                            app.ports.dataLoaded.send({ tasks: [], routines: [], plans: [], config: null });
                         }
                     }
                 });
@@ -262,6 +268,20 @@
                         console.log('Plan deleted from IndexedDB:', planId);
                     } catch (err) {
                         console.error('Error deleting plan:', err);
+                    }
+                });
+            }
+
+            // Handle saveConfig command
+            if (app.ports.saveConfig) {
+                app.ports.saveConfig.subscribe(async (config) => {
+                    try {
+                        // We use a fixed ID for the config since there's only one
+                        const configToSave = { ...config, id: 'main_config' };
+                        await saveItem('config', configToSave);
+                        console.log('Config saved to IndexedDB');
+                    } catch (err) {
+                        console.error('Error saving config:', err);
                     }
                 });
             }

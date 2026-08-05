@@ -104,6 +104,19 @@ getUuids count pool =
     in
     ( taken ++ fallbacks, dropped )
 
+
+saveConfigCmd : Model -> Cmd Msg
+saveConfigCmd model =
+    Ports.saveConfig <|
+        Types.encodeConfig
+            { mqttSyncEnabled = model.mqttSyncEnabled
+            , mqttBrokerUrl = model.mqttBrokerUrl
+            , mqttTopic = model.mqttTopic
+            , mqttEncryptionKey = model.mqttEncryptionKey
+            , mqttDeviceName = model.mqttDeviceName
+            }
+
+
 -- UPDATE
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -322,6 +335,11 @@ update msg model =
                         , routineSelectedDaysInput = newRoutineSelectedDaysInput
                         , planTitleInput = newPlanTitleInput
                       , uuidPool = poolAfterRoutines
+                      , mqttSyncEnabled = payload.config |> Maybe.map .mqttSyncEnabled |> Maybe.withDefault model.mqttSyncEnabled
+                      , mqttBrokerUrl = payload.config |> Maybe.map .mqttBrokerUrl |> Maybe.withDefault model.mqttBrokerUrl
+                      , mqttTopic = payload.config |> Maybe.map .mqttTopic |> Maybe.withDefault model.mqttTopic
+                      , mqttEncryptionKey = payload.config |> Maybe.map .mqttEncryptionKey |> Maybe.withDefault model.mqttEncryptionKey
+                      , mqttDeviceName = payload.config |> Maybe.map .mqttDeviceName |> Maybe.withDefault model.mqttDeviceName
                       }
                     , let
                         replenishCmd = if List.length poolAfterRoutines < 10 then Ports.requestUuids 50 else Cmd.none
@@ -373,16 +391,20 @@ update msg model =
             ( { model | newPlanTaskTitle = val }, Cmd.none )
 
         InputMqttBrokerUrl val ->
-            ( { model | mqttBrokerUrl = val }, Cmd.none )
+            let newModel = { model | mqttBrokerUrl = val } in
+            ( newModel, saveConfigCmd newModel )
 
         InputMqttTopic val ->
-            ( { model | mqttTopic = val }, Cmd.none )
+            let newModel = { model | mqttTopic = val } in
+            ( newModel, saveConfigCmd newModel )
 
         InputMqttEncryptionKey val ->
-            ( { model | mqttEncryptionKey = val }, Cmd.none )
+            let newModel = { model | mqttEncryptionKey = val } in
+            ( newModel, saveConfigCmd newModel )
 
         InputMqttDeviceName val ->
-            ( { model | mqttDeviceName = val }, Cmd.none )
+            let newModel = { model | mqttDeviceName = val } in
+            ( newModel, saveConfigCmd newModel )
 
         ToggleMqttSync ->
             let
@@ -391,8 +413,9 @@ update msg model =
                         "Desconectado"
                     else
                         "Conectando..."
+                newModel = { model | mqttSyncEnabled = not model.mqttSyncEnabled, mqttStatus = newStatus }
             in
-            ( { model | mqttSyncEnabled = not model.mqttSyncEnabled, mqttStatus = newStatus }, Cmd.none )
+            ( newModel, saveConfigCmd newModel )
 
         TriggerMqttSync ->
             let
@@ -405,8 +428,9 @@ update msg model =
             let
                 ( uuid, newPool ) = getUuid model.uuidPool
                 replenishCmd = if List.length newPool < 10 then Ports.requestUuids 50 else Cmd.none
+                newModel = { model | mqttTopic = uuid, uuidPool = newPool }
             in
-            ( { model | mqttTopic = uuid, uuidPool = newPool }, replenishCmd )
+            ( newModel, Cmd.batch [ replenishCmd, saveConfigCmd newModel ] )
 
         ReceiveUuids uuids ->
             ( { model | uuidPool = model.uuidPool ++ uuids }, Cmd.none )
