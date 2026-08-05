@@ -23,7 +23,7 @@ import Url exposing (Url)
 
 -- MAIN
 
-main : Program String Model Msg
+main : Program Decode.Value Model Msg
 main =
     Browser.application
         { init = init
@@ -35,8 +35,24 @@ main =
         }
 
 
-init : String -> Url -> Nav.Key -> ( Model, Cmd Msg )
-init today url key =
+init : Decode.Value -> Url -> Nav.Key -> ( Model, Cmd Msg )
+init flagsValue url key =
+    let
+        decoded =
+            Decode.decodeValue
+                (Decode.map2 (\t u -> { today = t, uuids = u })
+                    (Decode.field "today" Decode.string)
+                    (Decode.field "uuids" (Decode.list Decode.string))
+                )
+                flagsValue
+                
+        ( todayStr, initialUuids ) =
+            case decoded of
+                Ok vals ->
+                    ( vals.today, vals.uuids )
+                Err _ ->
+                    ( "2026-01-01", [] )
+    in
     ( { key = key
       , route = Route.fromUrl url
       , tasks = []
@@ -52,7 +68,7 @@ init today url key =
       , planDeadlineInput = ""
       , editingPlanId = Nothing
       , newPlanTaskTitle = ""
-      , today = today
+      , today = todayStr
       , drawerOpen = False
       , mqttSyncEnabled = False
       , mqttBrokerUrl = "wss://broker.hivemq.com:8884/mqtt"
@@ -60,14 +76,33 @@ init today url key =
       , mqttEncryptionKey = ""
       , mqttDeviceName = ""
       , mqttStatus = "Desconectado"
-      , mqttConnections = 
+      , mqttConnections =
           [ { deviceName = "Meu Celular", lastSync = "Agora mesmo" }
           , { deviceName = "Notebook Casa", lastSync = "10 min atrás" }
           ]
+      , uuidPool = initialUuids
       }
     , Ports.loadData ()
     )
 
+
+-- HELPERS
+
+getUuid : List String -> ( String, List String )
+getUuid pool =
+    case pool of
+        h :: t -> ( h, t )
+        [] -> ( "temp-uuid-" ++ String.fromInt (1), [] )
+
+getUuids : Int -> List String -> ( List String, List String )
+getUuids count pool =
+    let
+        taken = List.take count pool
+        dropped = List.drop count pool
+        needed = count - List.length taken
+        fallbacks = List.map (\i -> "temp-uuid-" ++ String.fromInt i) (List.range 1 needed)
+    in
+    ( taken ++ fallbacks, dropped )
 
 -- UPDATE
 
@@ -247,10 +282,15 @@ update msg model =
                                 )
                                 payload.routines
 
+                        routinesCount = List.length dailyRoutinesToUpdate
+                        
+                        (usedUuids, poolAfterRoutines) =
+                            getUuids routinesCount model.uuidPool
+                            
                         newGeneratedTasks =
-                            List.indexedMap
-                                (\idx r ->
-                                    { id = "task_routine_" ++ r.id ++ "_" ++ String.fromInt (List.length payload.tasks + idx) ++ "_" ++ model.today
+                            List.map2
+                                (\r uuid ->
+                                    { id = uuid
                                     , title = r.title
                                     , completed = False
                                     , origin = "rotina:" ++ r.title
@@ -261,6 +301,7 @@ update msg model =
                                     }
                                 )
                                 dailyRoutinesToUpdate
+                                usedUuids
 
                         generationCmds =
                             List.concat
@@ -280,10 +321,12 @@ update msg model =
                         , routineRecurrenceInput = newRoutineRecurrenceInput
                         , routineSelectedDaysInput = newRoutineSelectedDaysInput
                         , planTitleInput = newPlanTitleInput
-                        , planDescInput = newPlanDescInput
-                        , planDeadlineInput = newPlanDeadlineInput
+                      , uuidPool = poolAfterRoutines
                       }
-                    , Cmd.batch [ archiveCmds, generationCmds ]
+                    , let
+                        replenishCmd = if List.length poolAfterRoutines < 10 then Ports.requestUuids 50 else Cmd.none
+                      in
+                      Cmd.batch [ archiveCmds, generationCmds, replenishCmd ]
                     )
 
                 Err _ ->
@@ -359,10 +402,14 @@ update msg model =
             ( { model | mqttStatus = "Sincronizado", mqttConnections = updatedConnections }, Ports.loadData () )
 
         GenerateMqttTopic ->
-            ( model, Ports.requestUuid () )
+            let
+                ( uuid, newPool ) = getUuid model.uuidPool
+                replenishCmd = if List.length newPool < 10 then Ports.requestUuids 50 else Cmd.none
+            in
+            ( { model | mqttTopic = uuid, uuidPool = newPool }, replenishCmd )
 
-        ReceiveUuid uuid ->
-            ( { model | mqttTopic = uuid }, Cmd.none )
+        ReceiveUuids uuids ->
+            ( { model | uuidPool = model.uuidPool ++ uuids }, Cmd.none )
 
         CreateTask ->
             if String.trim model.taskTitleInput == "" then
@@ -372,8 +419,8 @@ update msg model =
                 case model.route of
                     Route.AdicionarTarefa (Just planId) ->
                         let
-                            taskId =
-                                "plantask_" ++ planId ++ "_" ++ String.fromInt (List.length model.tasks)
+                            ( uuid, poolAfterTask ) = getUuid model.uuidPool
+                            taskId = "plantask_" ++ uuid
 
                             newPlanTask =
                                 { id = taskId
@@ -399,7 +446,7 @@ update msg model =
                             Just plan ->
                                 let
                                     newTask =
-                                        { id = "task_" ++ taskId
+                                        { id = uuid
                                         , title = model.taskTitleInput
                                         , completed = False
                                         , origin = "plano:" ++ planId ++ ":" ++ taskId
@@ -414,11 +461,16 @@ update msg model =
                                     , tasks = model.tasks ++ [ newTask ]
                                     , taskTitleInput = ""
                                     , taskDateInput = ""
+                                    , uuidPool = poolAfterTask
                                   }
-                                , Cmd.batch
+                                , let
+                                    replenishCmd = if List.length poolAfterTask < 10 then Ports.requestUuids 50 else Cmd.none
+                                  in
+                                  Cmd.batch
                                     [ Ports.savePlan (Plan.encodePlan plan)
                                     , Ports.saveTask (Task.encodeTask newTask)
                                     , Nav.pushUrl model.key ("/planos/editar/" ++ planId)
+                                    , replenishCmd
                                     ]
                                 )
 
@@ -427,9 +479,7 @@ update msg model =
 
                     _ ->
                         let
-                            newId =
-                                "task_" ++ String.fromInt (List.length model.tasks) ++ "_" ++ model.taskTitleInput
-                                |> String.replace " " "_"
+                            ( newId, newPool ) = getUuid model.uuidPool
 
                             newTask =
                                 { id = newId
@@ -443,10 +493,14 @@ update msg model =
                                 , date = model.taskDateInput
                                 }
                         in
-                        ( { model | tasks = model.tasks ++ [ newTask ], taskTitleInput = "", taskDateInput = "" }
-                        , Cmd.batch
+                        ( { model | tasks = model.tasks ++ [ newTask ], taskTitleInput = "", taskDateInput = "", uuidPool = newPool }
+                        , let
+                            replenishCmd = if List.length newPool < 10 then Ports.requestUuids 50 else Cmd.none
+                          in
+                          Cmd.batch
                             [ Ports.saveTask (Task.encodeTask newTask)
                             , Nav.pushUrl model.key "/tarefas"
+                            , replenishCmd
                             ]
                         )
 
@@ -802,9 +856,10 @@ update msg model =
 
             else
                 let
-                    newId =
-                        "routine_" ++ String.fromInt (List.length model.routines) ++ "_" ++ model.routineTitleInput
-                        |> String.replace " " "_"
+                    (uuids, poolAfterRoutine) = getUuids 2 model.uuidPool
+                    (newId, taskId) = case uuids of
+                        [u1, u2] -> (u1, u2)
+                        _ -> ("temp-routine-uuid", "temp-task-uuid")
 
                     isDaily =
                         model.routineRecurrenceInput == "Diária"
@@ -821,7 +876,7 @@ update msg model =
                     maybeNewTask =
                         if isDaily then
                             Just
-                                { id = "task_routine_" ++ newId ++ "_0_" ++ model.today
+                                { id = taskId
                                 , title = model.routineTitleInput
                                 , completed = False
                                 , origin = "rotina:" ++ model.routineTitleInput
@@ -833,19 +888,22 @@ update msg model =
                         else
                             Nothing
 
+                    replenishCmd = if List.length poolAfterRoutine < 10 then Ports.requestUuids 50 else Cmd.none
                     cmds =
                         case maybeNewTask of
                             Just newTask ->
                                 [ Ports.saveRoutine (Routine.encodeRoutine newRoutine)
                                 , Ports.saveTask (Task.encodeTask newTask)
                                 , Nav.pushUrl model.key "/rotinas"
+                                , replenishCmd
                                 ]
                             Nothing ->
                                 [ Ports.saveRoutine (Routine.encodeRoutine newRoutine)
                                 , Nav.pushUrl model.key "/rotinas"
+                                , replenishCmd
                                 ]
                 in
-                ( { model | routines = model.routines ++ [ newRoutine ], tasks = model.tasks ++ (maybeNewTask |> Maybe.map List.singleton |> Maybe.withDefault []), routineTitleInput = "", routineRecurrenceInput = "Diária", routineSelectedDaysInput = [] }
+                ( { model | routines = model.routines ++ [ newRoutine ], tasks = model.tasks ++ (maybeNewTask |> Maybe.map List.singleton |> Maybe.withDefault []), routineTitleInput = "", routineRecurrenceInput = "Diária", routineSelectedDaysInput = [], uuidPool = poolAfterRoutine }
                 , Cmd.batch cmds
                 )
 
@@ -889,10 +947,11 @@ update msg model =
                                     )
                                     model.routines
 
+                            (uuid, poolAfterSave) = if needsNewTask then getUuid model.uuidPool else ("", model.uuidPool)
                             maybeNewTask =
                                 if needsNewTask then
                                     Just
-                                        { id = "task_routine_" ++ routine.id ++ "_" ++ String.fromInt (List.length model.tasks) ++ "_" ++ model.today
+                                        { id = uuid
                                         , title = trimmedTitle
                                         , completed = False
                                         , origin = "rotina:" ++ trimmedTitle
@@ -904,21 +963,25 @@ update msg model =
                                 else
                                     Nothing
 
+                            replenishCmd = if List.length poolAfterSave < 10 then Ports.requestUuids 50 else Cmd.none
                             cmds =
                                 case maybeNewTask of
                                     Just newTask ->
                                         [ Ports.saveRoutine (Routine.encodeRoutine updatedRoutine)
                                         , Ports.saveTask (Task.encodeTask newTask)
                                         , Nav.pushUrl model.key "/rotinas"
+                                        , replenishCmd
                                         ]
                                     Nothing ->
                                         [ Ports.saveRoutine (Routine.encodeRoutine updatedRoutine)
                                         , Nav.pushUrl model.key "/rotinas"
+                                        , replenishCmd
                                         ]
                         in
                         ( { model
                             | routines = updatedRoutines
                             , tasks = model.tasks ++ (maybeNewTask |> Maybe.map List.singleton |> Maybe.withDefault [])
+                            , uuidPool = poolAfterSave
                           }
                         , Cmd.batch cmds
                         )
@@ -986,8 +1049,7 @@ update msg model =
 
         GenerateTaskFromRoutine routine ->
             let
-                newTaskId =
-                    "task_routine_" ++ routine.id ++ "_" ++ String.fromInt (List.length model.tasks)
+                (newTaskId, newPool) = getUuid model.uuidPool
 
                 newTask =
                     { id = newTaskId
@@ -999,9 +1061,11 @@ update msg model =
                     , archived = False
                     , date = ""
                     }
+                    
+                replenishCmd = if List.length newPool < 10 then Ports.requestUuids 50 else Cmd.none
             in
-            ( { model | tasks = model.tasks ++ [ newTask ] }
-            , Ports.saveTask (Task.encodeTask newTask)
+            ( { model | tasks = model.tasks ++ [ newTask ], uuidPool = newPool }
+            , Cmd.batch [ Ports.saveTask (Task.encodeTask newTask), replenishCmd ]
             )
 
         CreatePlan ->
@@ -1010,9 +1074,7 @@ update msg model =
 
             else
                 let
-                    newId =
-                        "plan_" ++ String.fromInt (List.length model.plans) ++ "_" ++ model.planTitleInput
-                        |> String.replace " " "_"
+                    (newId, newPool) = getUuid model.uuidPool
 
                     newPlan =
                         { id = newId
@@ -1022,16 +1084,20 @@ update msg model =
                         , archived = False
                         , deadline = model.planDeadlineInput
                         }
+                    
+                    replenishCmd = if List.length newPool < 10 then Ports.requestUuids 50 else Cmd.none
                 in
                 ( { model
                     | plans = model.plans ++ [ newPlan ]
                     , planTitleInput = ""
                     , planDescInput = ""
                     , planDeadlineInput = ""
+                    , uuidPool = newPool
                   }
                 , Cmd.batch
                     [ Ports.savePlan (Plan.encodePlan newPlan)
                     , Nav.pushUrl model.key "/planos"
+                    , replenishCmd
                     ]
                 )
 
@@ -1172,8 +1238,8 @@ update msg model =
 
             else
                 let
-                    taskId =
-                        "plantask_" ++ planId ++ "_" ++ String.fromInt (List.length model.tasks)
+                    (uuid, newPool) = getUuid model.uuidPool
+                    taskId = "plantask_" ++ uuid
 
                     newPlanTask =
                         { id = taskId
@@ -1201,7 +1267,7 @@ update msg model =
                         -- Mirror to main tasks list as well
                         let
                             newTask =
-                                { id = "task_" ++ taskId
+                                { id = uuid
                                 , title = model.newPlanTaskTitle
                                 , completed = False
                                 , origin = "plano:" ++ planId ++ ":" ++ taskId
@@ -1210,15 +1276,19 @@ update msg model =
                                 , archived = False
                                 , date = ""
                                 }
+                            
+                            replenishCmd = if List.length newPool < 10 then Ports.requestUuids 50 else Cmd.none
                         in
                         ( { model
                             | plans = updatedPlans
                             , tasks = model.tasks ++ [ newTask ]
                             , newPlanTaskTitle = ""
+                            , uuidPool = newPool
                           }
                         , Cmd.batch
                             [ Ports.savePlan (Plan.encodePlan plan)
                             , Ports.saveTask (Task.encodeTask newTask)
+                            , replenishCmd
                             ]
                         )
 
@@ -1334,7 +1404,7 @@ subscriptions : Model -> Sub Msg
 subscriptions _ =
     Sub.batch
         [ Ports.dataLoaded DataLoadedRaw
-        , Ports.receiveUuid ReceiveUuid
+        , Ports.receiveUuids ReceiveUuids
         ]
 
 

@@ -37,6 +37,7 @@ type alias Model =
     , mqttDeviceName : String
     , mqttStatus : String
     , mqttConnections : List { deviceName : String, lastSync : String }
+    , uuidPool : List String
     }
 
 
@@ -65,7 +66,7 @@ type Msg
     | ToggleMqttSync
     | TriggerMqttSync
     | GenerateMqttTopic
-    | ReceiveUuid String
+    | ReceiveUuids (List String)
     -- Actions
     | CreateTask
     | SaveEditedTask String

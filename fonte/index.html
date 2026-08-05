@@ -151,7 +151,10 @@
             // Browser.application needs a flags argument, and returns { ports } if they are declared in Main.elm
             const app = Elm.Main.init({
                 node: document.getElementById('elm-app'),
-                flags: todayStr
+                flags: {
+                    today: todayStr,
+                    uuids: Array.from({ length: 100 }, () => window.crypto.randomUUID())
+                }
             });
 
             // Handle loadData command
@@ -181,12 +184,12 @@
                 });
             }
 
-            // Handle requestUuid command
-            if (app.ports.requestUuid) {
-                app.ports.requestUuid.subscribe(() => {
-                    if (app.ports.receiveUuid) {
-                        const uuid = window.crypto.randomUUID();
-                        app.ports.receiveUuid.send(uuid);
+            // Handle requestUuids command
+            if (app.ports.requestUuids) {
+                app.ports.requestUuids.subscribe((count) => {
+                    if (app.ports.receiveUuids) {
+                        const uuids = Array.from({ length: count }, () => window.crypto.randomUUID());
+                        app.ports.receiveUuids.send(uuids);
                     }
                 });
             }
