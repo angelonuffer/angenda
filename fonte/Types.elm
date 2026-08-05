@@ -61,6 +61,7 @@ type Msg
     | InputMqttEncryptionKey String
     | TriggerMqttSync
     | GenerateMqttTopic
+    | ReceiveUuid String
     -- Actions
     | CreateTask
     | SaveEditedTask String

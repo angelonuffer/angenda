@@ -1,4 +1,4 @@
-port module Ports exposing (loadData, saveTask, deleteTask, saveRoutine, deleteRoutine, savePlan, deletePlan, dataLoaded)
+port module Ports exposing (loadData, saveTask, deleteTask, saveRoutine, deleteRoutine, savePlan, deletePlan, dataLoaded, requestUuid, receiveUuid)
 
 import Json.Decode as Decode
 import Json.Encode as Encode
@@ -15,3 +15,5 @@ port savePlan : Encode.Value -> Cmd msg
 port deletePlan : String -> Cmd msg
 
 port dataLoaded : (Decode.Value -> msg) -> Sub msg
+port requestUuid : () -> Cmd msg
+port receiveUuid : (String -> msg) -> Sub msg

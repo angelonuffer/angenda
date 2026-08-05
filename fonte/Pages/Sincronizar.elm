@@ -38,27 +38,6 @@ viewSincronizar model =
                     [ text "Sincronize com segurança seus dados entre múltiplos dispositivos enviando pacotes cifrados via rede MQTT." ]
                 ]
             ]
-        , -- Security Alert / Encryption Banner
-          div [ class "bg-gradient-to-r from-red-800 to-red-700 rounded-xl p-5 text-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4" ]
-            [ div [ class "flex items-start gap-3.5" ]
-                [ div [ class "p-2.5 bg-red-600/60 rounded-lg text-amber-300 flex items-center justify-center shrink-0" ]
-                    [ span [ class "material-symbols-outlined", style "font-size" "28px" ] [ text "lock" ] ]
-                , div []
-                    [ h3 [ class "font-bold text-base tracking-wide flex items-center gap-2" ]
-                        [ text "Proteção por Criptografia End-to-End" ]
-                    , p [ class "text-red-100 text-sm mt-0.5 leading-relaxed" ]
-                        [ text "Seus dados (tarefas, rotinas e planos) são criptografados localmente com sua chave secreta antes de transitarem pelo broker MQTT." ]
-                    ]
-                ]
-            , button
-                [ onClick TriggerMqttSync
-                , id "btn-trigger-sync"
-                , class "px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm rounded-lg shadow transition-all duration-150 flex items-center justify-center gap-2 shrink-0 border border-amber-400"
-                ]
-                [ span [ class "material-symbols-outlined", style "font-size" "20px" ] [ text "sync" ]
-                , text "Sincronizar Agora"
-                ]
-            ]
         , -- Grid with MQTT Config & Connection Status
           div [ class "grid grid-cols-1 lg:grid-cols-3 gap-6" ]
             [ -- MQTT Settings Form Card (Takes 2 Columns)
@@ -93,7 +72,6 @@ viewSincronizar model =
                                 , id "mqtt-topic-input"
                                 , value model.mqttTopic
                                 , onInput InputMqttTopic
-                                , placeholder "angenda/sync/seu_codigo_unico"
                                 , class "flex-1 px-3.5 py-2.5 text-sm font-mono bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-slate-800 transition-all"
                                 ] []
                             , button
@@ -117,7 +95,7 @@ viewSincronizar model =
                             , id "mqtt-key-input"
                             , value model.mqttEncryptionKey
                             , onInput InputMqttEncryptionKey
-                            , placeholder "••••••••••••••••"
+                            , placeholder ""
                             , class "w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-slate-800 transition-all"
                             ] []
                         , p [ class "text-xs text-slate-500 mt-1" ]

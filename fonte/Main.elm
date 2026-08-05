@@ -55,8 +55,8 @@ init today url key =
       , today = today
       , drawerOpen = False
       , mqttBrokerUrl = "wss://broker.hivemq.com:8884/mqtt"
-      , mqttTopic = "angenda/sync/dispositivo_demo_123"
-      , mqttEncryptionKey = "chave_secreta_demo"
+      , mqttTopic = ""
+      , mqttEncryptionKey = ""
       , mqttStatus = "Conectado"
       , lastSyncTimestamp = Just "Hoje, 06:00"
       }
@@ -337,7 +337,10 @@ update msg model =
             ( { model | mqttStatus = "Sincronizado", lastSyncTimestamp = Just "Agora mesmo" }, Ports.loadData () )
 
         GenerateMqttTopic ->
-            ( { model | mqttTopic = "angenda/sync/dispositivo_" ++ model.today ++ "_77" }, Cmd.none )
+            ( model, Ports.requestUuid () )
+
+        ReceiveUuid uuid ->
+            ( { model | mqttTopic = uuid }, Cmd.none )
 
         CreateTask ->
             if String.trim model.taskTitleInput == "" then
@@ -1307,7 +1310,10 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Ports.dataLoaded DataLoadedRaw
+    Sub.batch
+        [ Ports.dataLoaded DataLoadedRaw
+        , Ports.receiveUuid ReceiveUuid
+        ]
 
 
 -- VIEW

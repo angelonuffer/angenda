@@ -181,6 +181,16 @@
                 });
             }
 
+            // Handle requestUuid command
+            if (app.ports.requestUuid) {
+                app.ports.requestUuid.subscribe(() => {
+                    if (app.ports.receiveUuid) {
+                        const uuid = window.crypto.randomUUID();
+                        app.ports.receiveUuid.send(uuid);
+                    }
+                });
+            }
+
             // Handle saveTask command
             if (app.ports.saveTask) {
                 app.ports.saveTask.subscribe(async (task) => {
