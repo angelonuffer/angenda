@@ -157,6 +157,87 @@
         let mainApp = null; // To hold Elm app reference
         const SESSION_ID = window.crypto.randomUUID(); // Id único para evitar conflito de abas com mesmo nome
 
+        // --- E2EE Crypto Helpers ---
+        let currentCryptoKey = null;
+
+        function arrayBufferToBase64(buffer) {
+            let binary = '';
+            const bytes = new Uint8Array(buffer);
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return window.btoa(binary);
+        }
+
+        function base64ToArrayBuffer(base64) {
+            const binary_string = window.atob(base64);
+            const len = binary_string.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binary_string.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        async function getAesKey(password) {
+            const enc = new TextEncoder();
+            const hash = await crypto.subtle.digest('SHA-256', enc.encode(password));
+            return await crypto.subtle.importKey('raw', hash, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+        }
+
+        async function encryptPayload(dataObj) {
+            if (!currentCryptoKey) return { ciphertext: null, iv: null };
+            
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const encoded = new TextEncoder().encode(JSON.stringify(dataObj));
+            
+            const ciphertext = await crypto.subtle.encrypt(
+                { name: 'AES-GCM', iv: iv },
+                currentCryptoKey,
+                encoded
+            );
+            
+            return {
+                ciphertext: arrayBufferToBase64(ciphertext),
+                iv: arrayBufferToBase64(iv)
+            };
+        }
+
+        async function decryptPayload(ciphertextB64, ivB64) {
+            if (!currentCryptoKey) throw new Error("No encryption key set");
+            
+            const ciphertext = base64ToArrayBuffer(ciphertextB64);
+            const iv = base64ToArrayBuffer(ivB64);
+            
+            const decrypted = await crypto.subtle.decrypt(
+                { name: 'AES-GCM', iv: iv },
+                currentCryptoKey,
+                ciphertext
+            );
+            
+            const decoded = new TextDecoder().decode(decrypted);
+            return JSON.parse(decoded);
+        }
+
+        async function buildMqttMessage(payloadObj) {
+            if (currentCryptoKey) {
+                const { ciphertext, iv } = await encryptPayload(payloadObj);
+                return {
+                    sessionId: SESSION_ID,
+                    encrypted: true,
+                    iv: iv,
+                    data: ciphertext
+                };
+            } else {
+                return {
+                    sessionId: SESSION_ID,
+                    encrypted: false,
+                    ...payloadObj
+                };
+            }
+        }
+        // ---------------------------
+
         function saveConfigSyncTimes() {
             if (!appConfig) return;
             appConfig.syncTimes = syncTimes;
@@ -170,13 +251,13 @@
                 const items = await getAllItems(storeName);
                 for (const item of items) {
                     if ((item.updatedAt || 0) > lastSyncTime) {
-                        mqttClient.publish(topic, JSON.stringify({
+                        const msg = await buildMqttMessage({
                             device: appConfig.mqttDeviceName || 'Dispositivo Anônimo',
-                            sessionId: SESSION_ID,
                             type: storeName,
                             action: 'save',
                             payload: item
-                        }));
+                        });
+                        mqttClient.publish(topic, JSON.stringify(msg));
                     }
                 }
             };
@@ -185,22 +266,34 @@
             await sendModified('plans');
         }
 
-        function publishMqttMessage(type, action, payload) {
+        async function publishMqttMessage(type, action, payload) {
             if (mqttClient && appConfig && appConfig.mqttSyncEnabled) {
                 const topic = 'angenda/' + appConfig.mqttTopic;
-                const message = {
+                const msg = await buildMqttMessage({
                     device: appConfig.mqttDeviceName || 'Dispositivo Anônimo',
-                    sessionId: SESSION_ID,
                     type: type,
                     action: action,
                     payload: payload
-                };
-                mqttClient.publish(topic, JSON.stringify(message));
+                });
+                mqttClient.publish(topic, JSON.stringify(msg));
             }
         }
 
-        function setupMqtt(config) {
+        async function setupMqtt(config) {
             appConfig = config;
+            
+            // Setup Crypto Key
+            if (config && config.mqttEncryptionKey && config.mqttEncryptionKey.trim() !== '') {
+                try {
+                    currentCryptoKey = await getAesKey(config.mqttEncryptionKey);
+                } catch (e) {
+                    console.error("Failed to derive encryption key", e);
+                    currentCryptoKey = null;
+                }
+            } else {
+                currentCryptoKey = null;
+            }
+
             if (mqttClient) {
                 mqttClient.end();
                 mqttClient = null;
@@ -215,18 +308,18 @@
             
             mqttClient = mqtt.connect(config.mqttBrokerUrl);
 
-            mqttClient.on('connect', () => {
+            mqttClient.on('connect', async () => {
                 if (mainApp && mainApp.ports.mqttStatusUpdate) mainApp.ports.mqttStatusUpdate.send('Conectado');
                 const topic = 'angenda/' + config.mqttTopic;
                 mqttClient.subscribe(topic);
                 
                 // Handshake inicial ao conectar
-                mqttClient.publish(topic, JSON.stringify({
+                const msg = await buildMqttMessage({
                     device: config.mqttDeviceName || 'Dispositivo Anônimo',
-                    sessionId: SESSION_ID,
                     type: 'sync',
                     action: 'hello'
-                }));
+                });
+                mqttClient.publish(topic, JSON.stringify(msg));
             });
 
             mqttClient.on('error', (err) => {
@@ -237,9 +330,26 @@
             mqttClient.on('message', async (topic, messageBuffer) => {
                 try {
                     const messageStr = messageBuffer.toString();
-                    const data = JSON.parse(messageStr);
+                    const rawData = JSON.parse(messageStr);
 
-                    if (data.sessionId === SESSION_ID) return; // Ignore own messages
+                    if (rawData.sessionId === SESSION_ID) return; // Ignore own messages
+
+                    let data = rawData;
+                    if (rawData.encrypted) {
+                        if (!currentCryptoKey) {
+                            console.warn("Mensagem criptografada recebida, mas nenhuma chave foi configurada.");
+                            return;
+                        }
+                        try {
+                            data = await decryptPayload(rawData.data, rawData.iv);
+                        } catch(e) {
+                            console.error("Falha ao decodificar a mensagem MQTT (chave incorreta?).", e);
+                            return;
+                        }
+                    } else if (currentCryptoKey) {
+                        console.warn("Mensagem não criptografada recebida, mas o E2EE está ativado localmente. Ignorando.");
+                        return;
+                    }
 
                     // Update connections map
                     const deviceLabel = data.device || 'Dispositivo Anônimo';
@@ -260,13 +370,13 @@
                             saveConfigSyncTimes();
                             
                             const replyTopic = 'angenda/' + appConfig.mqttTopic;
-                            mqttClient.publish(replyTopic, JSON.stringify({
+                            const msg = await buildMqttMessage({
                                 device: appConfig.mqttDeviceName || 'Dispositivo Anônimo',
-                                sessionId: SESSION_ID,
                                 type: 'sync',
                                 action: 'hello_ack',
-                                targetSession: data.sessionId
-                            }));
+                                targetSession: rawData.sessionId
+                            });
+                            mqttClient.publish(replyTopic, JSON.stringify(msg));
                         } else if (data.action === 'hello_ack' && data.targetSession === SESSION_ID) {
                             const lastSyncTime = syncTimes[deviceLabel] || 0;
                             await sendModifiedSince(lastSyncTime);
@@ -390,7 +500,7 @@
                         task.updatedAt = Date.now();
                         await saveItem('tasks', task);
                         console.log('Task saved to IndexedDB:', task.id);
-                        publishMqttMessage('tasks', 'save', task);
+                        await publishMqttMessage('tasks', 'save', task);
                     } catch (err) {
                         console.error('Error saving task:', err);
                     }
@@ -403,7 +513,7 @@
                     try {
                         await deleteItem('tasks', taskId);
                         console.log('Task deleted from IndexedDB:', taskId);
-                        publishMqttMessage('tasks', 'delete', taskId);
+                        await publishMqttMessage('tasks', 'delete', taskId);
                     } catch (err) {
                         console.error('Error deleting task:', err);
                     }
@@ -417,7 +527,7 @@
                         routine.updatedAt = Date.now();
                         await saveItem('routines', routine);
                         console.log('Routine saved to IndexedDB:', routine.id);
-                        publishMqttMessage('routines', 'save', routine);
+                        await publishMqttMessage('routines', 'save', routine);
                     } catch (err) {
                         console.error('Error saving routine:', err);
                     }
@@ -430,7 +540,7 @@
                     try {
                         await deleteItem('routines', routineId);
                         console.log('Routine deleted from IndexedDB:', routineId);
-                        publishMqttMessage('routines', 'delete', routineId);
+                        await publishMqttMessage('routines', 'delete', routineId);
                     } catch (err) {
                         console.error('Error deleting routine:', err);
                     }
@@ -444,7 +554,7 @@
                         plan.updatedAt = Date.now();
                         await saveItem('plans', plan);
                         console.log('Plan saved to IndexedDB:', plan.id);
-                        publishMqttMessage('plans', 'save', plan);
+                        await publishMqttMessage('plans', 'save', plan);
                     } catch (err) {
                         console.error('Error saving plan:', err);
                     }
@@ -457,7 +567,7 @@
                     try {
                         await deleteItem('plans', planId);
                         console.log('Plan deleted from IndexedDB:', planId);
-                        publishMqttMessage('plans', 'delete', planId);
+                        await publishMqttMessage('plans', 'delete', planId);
                     } catch (err) {
                         console.error('Error deleting plan:', err);
                     }
