@@ -311,6 +311,7 @@ update msg model =
                                     , history = []
                                     , archived = False
                                     , date = model.today
+                                    , updatedAt = 0
                                     }
                                 )
                                 dailyRoutinesToUpdate
@@ -478,6 +479,7 @@ update msg model =
                                         , history = []
                                         , archived = False
                                         , date = model.taskDateInput
+                                        , updatedAt = 0
                                         }
                                 in
                                 ( { model
@@ -515,6 +517,7 @@ update msg model =
                                 , history = []
                                 , archived = False
                                 , date = model.taskDateInput
+                                , updatedAt = 0
                                 }
                         in
                         ( { model | tasks = model.tasks ++ [ newTask ], taskTitleInput = "", taskDateInput = "", uuidPool = newPool }
@@ -895,6 +898,7 @@ update msg model =
                         , archived = False
                         , lastGeneratedDate = if isDaily then model.today else ""
                         , selectedDays = model.routineSelectedDaysInput
+                        , updatedAt = 0
                         }
 
                     maybeNewTask =
@@ -908,6 +912,7 @@ update msg model =
                                 , history = []
                                 , archived = False
                                 , date = model.today
+                                , updatedAt = 0
                                 }
                         else
                             Nothing
@@ -983,6 +988,7 @@ update msg model =
                                         , history = []
                                         , archived = False
                                         , date = model.today
+                                        , updatedAt = 0
                                         }
                                 else
                                     Nothing
@@ -1084,6 +1090,7 @@ update msg model =
                     , history = []
                     , archived = False
                     , date = ""
+                    , updatedAt = 0
                     }
                     
                 replenishCmd = if List.length newPool < 10 then Ports.requestUuids 50 else Cmd.none
@@ -1107,6 +1114,7 @@ update msg model =
                         , tasks = []
                         , archived = False
                         , deadline = model.planDeadlineInput
+                        , updatedAt = 0
                         }
                     
                     replenishCmd = if List.length newPool < 10 then Ports.requestUuids 50 else Cmd.none
@@ -1299,6 +1307,7 @@ update msg model =
                                 , history = []
                                 , archived = False
                                 , date = ""
+                                , updatedAt = 0
                                 }
                             
                             replenishCmd = if List.length newPool < 10 then Ports.requestUuids 50 else Cmd.none
@@ -1421,6 +1430,25 @@ update msg model =
                 Nothing ->
                     ( model, Cmd.none )
 
+        MqttStatusUpdated status ->
+            ( { model | mqttStatus = status }, Cmd.none )
+
+        MqttConnectionsUpdated val ->
+            let
+                decoder =
+                    Decode.list
+                        (Decode.map2 (\device sync -> { deviceName = device, lastSync = sync })
+                            (Decode.field "deviceName" Decode.string)
+                            (Decode.field "lastSync" Decode.string)
+                        )
+            in
+            case Decode.decodeValue decoder val of
+                Ok list ->
+                    ( { model | mqttConnections = list }, Cmd.none )
+
+                Err _ ->
+                    ( model, Cmd.none )
+
 
 -- SUBSCRIPTIONS
 
@@ -1429,6 +1457,8 @@ subscriptions _ =
     Sub.batch
         [ Ports.dataLoaded DataLoadedRaw
         , Ports.receiveUuids ReceiveUuids
+        , Ports.mqttStatusUpdate MqttStatusUpdated
+        , Ports.mqttConnectionsUpdate MqttConnectionsUpdated
         ]
 
 

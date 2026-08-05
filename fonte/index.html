@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Angenda - Gerenciador de Tarefas</title>
     <link rel="icon" type="image/png" href="/brand-icon.png">
+    <!-- MQTT.js -->
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <!-- Tailwind CSS Play CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -91,6 +93,18 @@
             });
         }
 
+        // Generic helper to get a single item from a store
+        function getItem(storeName, key) {
+            return new Promise((resolve, reject) => {
+                if (!db) return reject(new Error('Database not initialized'));
+                const transaction = db.transaction(storeName, 'readonly');
+                const store = transaction.objectStore(storeName);
+                const request = store.get(key);
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
         // Generic helper to get all items from a store
         function getAllItems(storeName) {
             return new Promise((resolve, reject) => {
@@ -136,6 +150,104 @@
             });
         }
 
+        let mqttClient = null;
+        let mqttConnectionsMap = new Map();
+        let appConfig = null;
+        let mainApp = null; // To hold Elm app reference
+        const SESSION_ID = window.crypto.randomUUID(); // Id único para evitar conflito de abas com mesmo nome
+
+        function publishMqttMessage(type, action, payload) {
+            if (mqttClient && appConfig && appConfig.mqttSyncEnabled) {
+                const topic = 'angenda/' + appConfig.mqttTopic;
+                const message = {
+                    device: appConfig.mqttDeviceName || 'Dispositivo Anônimo',
+                    sessionId: SESSION_ID,
+                    type: type,
+                    action: action,
+                    payload: payload
+                };
+                mqttClient.publish(topic, JSON.stringify(message));
+            }
+        }
+
+        function setupMqtt(config) {
+            appConfig = config;
+            if (mqttClient) {
+                mqttClient.end();
+                mqttClient = null;
+            }
+
+            if (!config || !config.mqttSyncEnabled || !config.mqttBrokerUrl || !config.mqttTopic) {
+                if (mainApp && mainApp.ports.mqttStatusUpdate) mainApp.ports.mqttStatusUpdate.send('Desconectado');
+                return;
+            }
+
+            if (mainApp && mainApp.ports.mqttStatusUpdate) mainApp.ports.mqttStatusUpdate.send('Conectando...');
+            
+            mqttClient = mqtt.connect(config.mqttBrokerUrl);
+
+            mqttClient.on('connect', () => {
+                if (mainApp && mainApp.ports.mqttStatusUpdate) mainApp.ports.mqttStatusUpdate.send('Conectado');
+                const topic = 'angenda/' + config.mqttTopic;
+                mqttClient.subscribe(topic);
+            });
+
+            mqttClient.on('error', (err) => {
+                console.error('MQTT error:', err);
+                if (mainApp && mainApp.ports.mqttStatusUpdate) mainApp.ports.mqttStatusUpdate.send('Erro de conexão');
+            });
+
+            mqttClient.on('message', async (topic, messageBuffer) => {
+                try {
+                    const messageStr = messageBuffer.toString();
+                    const data = JSON.parse(messageStr);
+
+                    if (data.sessionId === SESSION_ID) return; // Ignore own messages
+
+                    // Update connections map
+                    const deviceLabel = data.device || 'Dispositivo Anônimo';
+                    mqttConnectionsMap.set(deviceLabel, new Date().toLocaleTimeString());
+                    const connectionsList = Array.from(mqttConnectionsMap.entries()).map(([device, time]) => ({
+                        deviceName: device,
+                        lastSync: time
+                    }));
+                    if (mainApp && mainApp.ports.mqttConnectionsUpdate) {
+                        mainApp.ports.mqttConnectionsUpdate.send(connectionsList);
+                    }
+
+                    const storeName = data.type; // 'tasks', 'routines', 'plans'
+                    if (data.action === 'save') {
+                        const incomingItem = data.payload;
+                        const existingItem = await getItem(storeName, incomingItem.id).catch(() => null);
+
+                        const incomingTime = incomingItem.updatedAt || 0;
+                        const existingTime = existingItem ? (existingItem.updatedAt || 0) : -1;
+
+                        if (incomingTime > existingTime) {
+                            await saveItem(storeName, incomingItem);
+                        }
+                    } else if (data.action === 'delete') {
+                        await deleteItem(storeName, data.payload);
+                    }
+
+                    // Reload UI
+                    const tasks = await getAllItems('tasks');
+                    const routines = await getAllItems('routines');
+                    const plans = await getAllItems('plans');
+                    if (mainApp && mainApp.ports.dataLoaded) {
+                        mainApp.ports.dataLoaded.send({
+                            tasks: tasks || [],
+                            routines: routines || [],
+                            plans: plans || [],
+                            config: config
+                        });
+                    }
+                } catch (err) {
+                    console.error('Error processing MQTT message', err);
+                }
+            });
+        }
+
         // Start Elm App and register Ports
         window.addEventListener('DOMContentLoaded', async () => {
             try {
@@ -159,6 +271,12 @@
                     uuids: Array.from({ length: 100 }, () => window.crypto.randomUUID())
                 }
             });
+            mainApp = app;
+
+            // Load initial config if any
+            getAllItems('config').then(configs => {
+                if (configs.length > 0) setupMqtt(configs[0]);
+            }).catch(() => {});
 
             // Handle loadData command
             if (app.ports.loadData) {
@@ -204,8 +322,10 @@
             if (app.ports.saveTask) {
                 app.ports.saveTask.subscribe(async (task) => {
                     try {
+                        task.updatedAt = Date.now();
                         await saveItem('tasks', task);
                         console.log('Task saved to IndexedDB:', task.id);
+                        publishMqttMessage('tasks', 'save', task);
                     } catch (err) {
                         console.error('Error saving task:', err);
                     }
@@ -218,6 +338,7 @@
                     try {
                         await deleteItem('tasks', taskId);
                         console.log('Task deleted from IndexedDB:', taskId);
+                        publishMqttMessage('tasks', 'delete', taskId);
                     } catch (err) {
                         console.error('Error deleting task:', err);
                     }
@@ -228,8 +349,10 @@
             if (app.ports.saveRoutine) {
                 app.ports.saveRoutine.subscribe(async (routine) => {
                     try {
+                        routine.updatedAt = Date.now();
                         await saveItem('routines', routine);
                         console.log('Routine saved to IndexedDB:', routine.id);
+                        publishMqttMessage('routines', 'save', routine);
                     } catch (err) {
                         console.error('Error saving routine:', err);
                     }
@@ -242,6 +365,7 @@
                     try {
                         await deleteItem('routines', routineId);
                         console.log('Routine deleted from IndexedDB:', routineId);
+                        publishMqttMessage('routines', 'delete', routineId);
                     } catch (err) {
                         console.error('Error deleting routine:', err);
                     }
@@ -252,8 +376,10 @@
             if (app.ports.savePlan) {
                 app.ports.savePlan.subscribe(async (plan) => {
                     try {
+                        plan.updatedAt = Date.now();
                         await saveItem('plans', plan);
                         console.log('Plan saved to IndexedDB:', plan.id);
+                        publishMqttMessage('plans', 'save', plan);
                     } catch (err) {
                         console.error('Error saving plan:', err);
                     }
@@ -266,6 +392,7 @@
                     try {
                         await deleteItem('plans', planId);
                         console.log('Plan deleted from IndexedDB:', planId);
+                        publishMqttMessage('plans', 'delete', planId);
                     } catch (err) {
                         console.error('Error deleting plan:', err);
                     }
@@ -280,6 +407,7 @@
                         const configToSave = { ...config, id: 'main_config' };
                         await saveItem('config', configToSave);
                         console.log('Config saved to IndexedDB');
+                        setupMqtt(configToSave);
                     } catch (err) {
                         console.error('Error saving config:', err);
                     }

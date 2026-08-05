@@ -13,6 +13,7 @@ type alias Task =
     , history : List String
     , archived : Bool
     , date : String
+    , updatedAt : Int
     }
 
 
@@ -27,6 +28,7 @@ encodeTask task =
         , ( "history", Encode.list Encode.string task.history )
         , ( "archived", Encode.bool task.archived )
         , ( "date", Encode.string task.date )
+        , ( "updatedAt", Encode.int task.updatedAt )
         ]
 
 
@@ -41,3 +43,4 @@ taskDecoder =
         |> Decode.andThen (\f -> Decode.map f (Decode.oneOf [ Decode.field "history" (Decode.list Decode.string), Decode.succeed [] ]))
         |> Decode.andThen (\f -> Decode.map f (Decode.oneOf [ Decode.field "archived" Decode.bool, Decode.succeed False ]))
         |> Decode.andThen (\f -> Decode.map f (Decode.oneOf [ Decode.field "date" Decode.string, Decode.succeed "" ]))
+        |> Decode.andThen (\f -> Decode.map f (Decode.oneOf [ Decode.field "updatedAt" Decode.int, Decode.succeed 0 ]))

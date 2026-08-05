@@ -98,6 +98,8 @@ type Msg
     | TriggerMqttSync
     | GenerateMqttTopic
     | ReceiveUuids (List String)
+    | MqttStatusUpdated String
+    | MqttConnectionsUpdated Decode.Value
     -- Actions
     | CreateTask
     | SaveEditedTask String
