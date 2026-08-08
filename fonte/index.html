@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Angenda - Gerenciador de Tarefas</title>
     <link rel="icon" type="image/png" href="/brand-icon.png">
+    <!-- MQTT.js -->
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <!-- Tailwind CSS Play CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -73,6 +75,9 @@
                     if (!dbInstance.objectStoreNames.contains('plans')) {
                         dbInstance.createObjectStore('plans', { keyPath: 'id' });
                     }
+                    if (!dbInstance.objectStoreNames.contains('config')) {
+                        dbInstance.createObjectStore('config', { keyPath: 'id' });
+                    }
                 };
 
                 request.onsuccess = (event) => {
@@ -88,6 +93,18 @@
             });
         }
 
+        // Generic helper to get a single item from a store
+        function getItem(storeName, key) {
+            return new Promise((resolve, reject) => {
+                if (!db) return reject(new Error('Database not initialized'));
+                const transaction = db.transaction(storeName, 'readonly');
+                const store = transaction.objectStore(storeName);
+                const request = store.get(key);
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
         // Generic helper to get all items from a store
         function getAllItems(storeName) {
             return new Promise((resolve, reject) => {
@@ -98,7 +115,11 @@
                 const store = transaction.objectStore(storeName);
                 const request = store.getAll();
 
-                request.onsuccess = () => resolve(request.result);
+                request.onsuccess = () => {
+                    const result = request.result || [];
+                    result.sort((a, b) => (a.updatedAt || 0) - (b.updatedAt || 0));
+                    resolve(result);
+                };
                 request.onerror = () => reject(request.error);
             });
         }
@@ -133,6 +154,275 @@
             });
         }
 
+        let mqttClient = null;
+        let mqttConnectionsMap = new Map();
+        let appConfig = null;
+        let syncTimes = {};
+        let mainApp = null; // To hold Elm app reference
+        const SESSION_ID = window.crypto.randomUUID(); // Id único para evitar conflito de abas com mesmo nome
+
+        // --- E2EE Crypto Helpers ---
+        let currentCryptoKey = null;
+
+        function arrayBufferToBase64(buffer) {
+            let binary = '';
+            const bytes = new Uint8Array(buffer);
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return window.btoa(binary);
+        }
+
+        function base64ToArrayBuffer(base64) {
+            const binary_string = window.atob(base64);
+            const len = binary_string.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binary_string.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        async function getAesKey(password) {
+            const enc = new TextEncoder();
+            const hash = await crypto.subtle.digest('SHA-256', enc.encode(password));
+            return await crypto.subtle.importKey('raw', hash, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+        }
+
+        async function encryptPayload(dataObj) {
+            if (!currentCryptoKey) return { ciphertext: null, iv: null };
+            
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const encoded = new TextEncoder().encode(JSON.stringify(dataObj));
+            
+            const ciphertext = await crypto.subtle.encrypt(
+                { name: 'AES-GCM', iv: iv },
+                currentCryptoKey,
+                encoded
+            );
+            
+            return {
+                ciphertext: arrayBufferToBase64(ciphertext),
+                iv: arrayBufferToBase64(iv)
+            };
+        }
+
+        async function decryptPayload(ciphertextB64, ivB64) {
+            if (!currentCryptoKey) throw new Error("No encryption key set");
+            
+            const ciphertext = base64ToArrayBuffer(ciphertextB64);
+            const iv = base64ToArrayBuffer(ivB64);
+            
+            const decrypted = await crypto.subtle.decrypt(
+                { name: 'AES-GCM', iv: iv },
+                currentCryptoKey,
+                ciphertext
+            );
+            
+            const decoded = new TextDecoder().decode(decrypted);
+            return JSON.parse(decoded);
+        }
+
+        async function buildMqttMessage(payloadObj) {
+            if (currentCryptoKey) {
+                const { ciphertext, iv } = await encryptPayload(payloadObj);
+                return {
+                    sessionId: SESSION_ID,
+                    encrypted: true,
+                    iv: iv,
+                    data: ciphertext
+                };
+            } else {
+                return {
+                    sessionId: SESSION_ID,
+                    encrypted: false,
+                    ...payloadObj
+                };
+            }
+        }
+        // ---------------------------
+
+        function saveConfigSyncTimes() {
+            if (!appConfig) return;
+            appConfig.syncTimes = syncTimes;
+            saveItem('config', appConfig).catch(err => console.error('Error saving syncTimes:', err));
+        }
+
+        async function sendModifiedSince(lastSyncTime) {
+            if (!mqttClient || !appConfig || !appConfig.mqttSyncEnabled) return;
+            const topic = 'angenda/' + appConfig.mqttTopic;
+            const sendModified = async (storeName) => {
+                const items = await getAllItems(storeName);
+                for (const item of items) {
+                    if ((item.updatedAt || 0) > lastSyncTime) {
+                        const msg = await buildMqttMessage({
+                            device: appConfig.mqttDeviceName || 'Dispositivo Anônimo',
+                            type: storeName,
+                            action: 'save',
+                            payload: item
+                        });
+                        mqttClient.publish(topic, JSON.stringify(msg));
+                    }
+                }
+            };
+            await sendModified('tasks');
+            await sendModified('routines');
+            await sendModified('plans');
+        }
+
+        async function publishMqttMessage(type, action, payload) {
+            if (mqttClient && appConfig && appConfig.mqttSyncEnabled) {
+                const topic = 'angenda/' + appConfig.mqttTopic;
+                const msg = await buildMqttMessage({
+                    device: appConfig.mqttDeviceName || 'Dispositivo Anônimo',
+                    type: type,
+                    action: action,
+                    payload: payload
+                });
+                mqttClient.publish(topic, JSON.stringify(msg));
+            }
+        }
+
+        async function setupMqtt(config) {
+            appConfig = config;
+            
+            // Setup Crypto Key
+            if (config && config.mqttEncryptionKey && config.mqttEncryptionKey.trim() !== '') {
+                try {
+                    currentCryptoKey = await getAesKey(config.mqttEncryptionKey);
+                } catch (e) {
+                    console.error("Failed to derive encryption key", e);
+                    currentCryptoKey = null;
+                }
+            } else {
+                currentCryptoKey = null;
+            }
+
+            if (mqttClient) {
+                mqttClient.end();
+                mqttClient = null;
+            }
+
+            if (!config || !config.mqttSyncEnabled || !config.mqttBrokerUrl || !config.mqttTopic) {
+                if (mainApp && mainApp.ports.mqttStatusUpdate) mainApp.ports.mqttStatusUpdate.send('Desconectado');
+                return;
+            }
+
+            if (mainApp && mainApp.ports.mqttStatusUpdate) mainApp.ports.mqttStatusUpdate.send('Conectando...');
+            
+            mqttClient = mqtt.connect(config.mqttBrokerUrl);
+
+            mqttClient.on('connect', async () => {
+                if (mainApp && mainApp.ports.mqttStatusUpdate) mainApp.ports.mqttStatusUpdate.send('Conectado');
+                const topic = 'angenda/' + config.mqttTopic;
+                mqttClient.subscribe(topic);
+                
+                // Handshake inicial ao conectar
+                const msg = await buildMqttMessage({
+                    device: config.mqttDeviceName || 'Dispositivo Anônimo',
+                    type: 'sync',
+                    action: 'hello'
+                });
+                mqttClient.publish(topic, JSON.stringify(msg));
+            });
+
+            mqttClient.on('error', (err) => {
+                console.error('MQTT error:', err);
+                if (mainApp && mainApp.ports.mqttStatusUpdate) mainApp.ports.mqttStatusUpdate.send('Erro de conexão');
+            });
+
+            mqttClient.on('message', async (topic, messageBuffer) => {
+                try {
+                    const messageStr = messageBuffer.toString();
+                    const rawData = JSON.parse(messageStr);
+
+                    if (rawData.sessionId === SESSION_ID) return; // Ignore own messages
+
+                    let data = rawData;
+                    if (rawData.encrypted) {
+                        if (!currentCryptoKey) {
+                            console.warn("Mensagem criptografada recebida, mas nenhuma chave foi configurada.");
+                            return;
+                        }
+                        try {
+                            data = await decryptPayload(rawData.data, rawData.iv);
+                        } catch(e) {
+                            console.error("Falha ao decodificar a mensagem MQTT (chave incorreta?).", e);
+                            return;
+                        }
+                    } else if (currentCryptoKey) {
+                        console.warn("Mensagem não criptografada recebida, mas o E2EE está ativado localmente. Ignorando.");
+                        return;
+                    }
+
+                    // Update connections map
+                    const deviceLabel = data.device || 'Dispositivo Anônimo';
+                    mqttConnectionsMap.set(deviceLabel, new Date().toLocaleTimeString());
+                    const connectionsList = Array.from(mqttConnectionsMap.entries()).map(([device, time]) => ({
+                        deviceName: device,
+                        lastSync: time
+                    }));
+                    if (mainApp && mainApp.ports.mqttConnectionsUpdate) {
+                        mainApp.ports.mqttConnectionsUpdate.send(connectionsList);
+                    }
+
+                    if (data.type === 'sync') {
+                        if (data.action === 'hello') {
+                            const lastSyncTime = syncTimes[deviceLabel] || 0;
+                            await sendModifiedSince(lastSyncTime);
+                            syncTimes[deviceLabel] = Date.now();
+                            saveConfigSyncTimes();
+                            
+                            const replyTopic = 'angenda/' + appConfig.mqttTopic;
+                            const msg = await buildMqttMessage({
+                                device: appConfig.mqttDeviceName || 'Dispositivo Anônimo',
+                                type: 'sync',
+                                action: 'hello_ack',
+                                targetSession: rawData.sessionId
+                            });
+                            mqttClient.publish(replyTopic, JSON.stringify(msg));
+                        } else if (data.action === 'hello_ack' && data.targetSession === SESSION_ID) {
+                            const lastSyncTime = syncTimes[deviceLabel] || 0;
+                            await sendModifiedSince(lastSyncTime);
+                            syncTimes[deviceLabel] = Date.now();
+                            saveConfigSyncTimes();
+                        }
+                        return; // O payload de handshake não precisa do resto do processamento
+                    }
+
+                    const storeName = data.type; // 'tasks', 'routines', 'plans'
+                    if (data.action === 'save') {
+                        const incomingItem = data.payload;
+                        const existingItem = await getItem(storeName, incomingItem.id).catch(() => null);
+
+                        const incomingTime = incomingItem.updatedAt || 0;
+                        const existingTime = existingItem ? (existingItem.updatedAt || 0) : -1;
+
+                        if (incomingTime > existingTime) {
+                            await saveItem(storeName, incomingItem);
+                        }
+                    } else if (data.action === 'delete') {
+                        await deleteItem(storeName, data.payload);
+                    }
+
+                    // Reload UI
+                    const tasks = await getAllItems('tasks');
+                    const routines = await getAllItems('routines');
+                    const plans = await getAllItems('plans');
+                    if (mainApp && mainApp.ports.dataLoaded) {
+                        mainApp.ports.dataLoaded.send({
+                            tasks: tasks || [],
+                            routines: routines || [],
+                            plans: plans || [],
+                            config: config
+                        });
+                    }
+                } catch (err) {
+                    console.error('Error processing MQTT message', err);
+                }
+            });
+        }
+
         // Start Elm App and register Ports
         window.addEventListener('DOMContentLoaded', async () => {
             try {
@@ -151,8 +441,21 @@
             // Browser.application needs a flags argument, and returns { ports } if they are declared in Main.elm
             const app = Elm.Main.init({
                 node: document.getElementById('elm-app'),
-                flags: todayStr
+                flags: {
+                    today: todayStr,
+                    uuids: Array.from({ length: 100 }, () => window.crypto.randomUUID())
+                }
             });
+            mainApp = app;
+
+            // Load initial config if any
+            getAllItems('config').then(configs => {
+                if (configs.length > 0) {
+                    const cfg = configs[0];
+                    syncTimes = cfg.syncTimes || {};
+                    setupMqtt(cfg);
+                }
+            }).catch(() => {});
 
             // Handle loadData command
             if (app.ports.loadData) {
@@ -161,22 +464,35 @@
                         const tasks = await getAllItems('tasks');
                         const routines = await getAllItems('routines');
                         const plans = await getAllItems('plans');
+                        const configs = await getAllItems('config');
+                        const config = configs.length > 0 ? configs[0] : null;
 
-                        console.log('Loaded from DB:', { tasks, routines, plans });
+                        console.log('Loaded from DB:', { tasks, routines, plans, config });
 
                         if (app.ports.dataLoaded) {
                             app.ports.dataLoaded.send({
                                 tasks: tasks || [],
                                 routines: routines || [],
-                                plans: plans || []
+                                plans: plans || [],
+                                config: config
                             });
                         }
                     } catch (err) {
                         console.error('Error loading data from IndexedDB:', err);
                         // Fallback empty load
                         if (app.ports.dataLoaded) {
-                            app.ports.dataLoaded.send({ tasks: [], routines: [], plans: [] });
+                            app.ports.dataLoaded.send({ tasks: [], routines: [], plans: [], config: null });
                         }
+                    }
+                });
+            }
+
+            // Handle requestUuids command
+            if (app.ports.requestUuids) {
+                app.ports.requestUuids.subscribe((count) => {
+                    if (app.ports.receiveUuids) {
+                        const uuids = Array.from({ length: count }, () => window.crypto.randomUUID());
+                        app.ports.receiveUuids.send(uuids);
                     }
                 });
             }
@@ -185,8 +501,10 @@
             if (app.ports.saveTask) {
                 app.ports.saveTask.subscribe(async (task) => {
                     try {
+                        task.updatedAt = Date.now();
                         await saveItem('tasks', task);
                         console.log('Task saved to IndexedDB:', task.id);
+                        await publishMqttMessage('tasks', 'save', task);
                     } catch (err) {
                         console.error('Error saving task:', err);
                     }
@@ -199,6 +517,7 @@
                     try {
                         await deleteItem('tasks', taskId);
                         console.log('Task deleted from IndexedDB:', taskId);
+                        await publishMqttMessage('tasks', 'delete', taskId);
                     } catch (err) {
                         console.error('Error deleting task:', err);
                     }
@@ -209,8 +528,10 @@
             if (app.ports.saveRoutine) {
                 app.ports.saveRoutine.subscribe(async (routine) => {
                     try {
+                        routine.updatedAt = Date.now();
                         await saveItem('routines', routine);
                         console.log('Routine saved to IndexedDB:', routine.id);
+                        await publishMqttMessage('routines', 'save', routine);
                     } catch (err) {
                         console.error('Error saving routine:', err);
                     }
@@ -223,6 +544,7 @@
                     try {
                         await deleteItem('routines', routineId);
                         console.log('Routine deleted from IndexedDB:', routineId);
+                        await publishMqttMessage('routines', 'delete', routineId);
                     } catch (err) {
                         console.error('Error deleting routine:', err);
                     }
@@ -233,8 +555,10 @@
             if (app.ports.savePlan) {
                 app.ports.savePlan.subscribe(async (plan) => {
                     try {
+                        plan.updatedAt = Date.now();
                         await saveItem('plans', plan);
                         console.log('Plan saved to IndexedDB:', plan.id);
+                        await publishMqttMessage('plans', 'save', plan);
                     } catch (err) {
                         console.error('Error saving plan:', err);
                     }
@@ -247,8 +571,25 @@
                     try {
                         await deleteItem('plans', planId);
                         console.log('Plan deleted from IndexedDB:', planId);
+                        await publishMqttMessage('plans', 'delete', planId);
                     } catch (err) {
                         console.error('Error deleting plan:', err);
+                    }
+                });
+            }
+
+            // Handle saveConfig command
+            if (app.ports.saveConfig) {
+                app.ports.saveConfig.subscribe(async (config) => {
+                    try {
+                        // We use a fixed ID for the config since there's only one
+                        // Preserve existing syncTimes
+                        const configToSave = { ...config, id: 'main_config', syncTimes: syncTimes };
+                        await saveItem('config', configToSave);
+                        console.log('Config saved to IndexedDB');
+                        setupMqtt(configToSave);
+                    } catch (err) {
+                        console.error('Error saving config:', err);
                     }
                 });
             }

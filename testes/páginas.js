@@ -13,6 +13,10 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
     vertical: { width: 375, height: 812 }
   };
 
+  let editPlanUrl;
+  let editTaskUrl;
+
+
   // Step 1: Navigate to Tasks, populate some tasks first so screenshots look nice
   console.log('Navigating to /tarefas to pre-populate tasks...');
   await page.goto('/tarefas');
@@ -72,6 +76,8 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
   // Edit the newly created plan
   await page.click('a:has-text("Editar")');
   await page.waitForSelector('#add-plan-task-btn');
+  editPlanUrl = new URL(page.url()).pathname;
+
 
   // Step 3a: Add first plan task via the new page
   await page.click('#add-plan-task-btn');
@@ -111,6 +117,8 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
   await page.waitForSelector('a[title="Editar Tarefa"]', { timeout: 10000 });
   await page.click('a[title="Editar Tarefa"]');
   await page.waitForSelector('#new-task-title', { timeout: 10000 });
+  editTaskUrl = new URL(page.url()).pathname;
+
   await page.fill('#new-task-title', 'Comprar mantimentos para a semana inteira');
   await page.click('button[type="submit"]');
   await page.waitForTimeout(500);
@@ -150,25 +158,30 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
   const routes = [
     'tarefas',
     'tarefas/nova',
-    'tarefas/editar/task_0_Comprar_mantimentos_para_a_semana',
+    editTaskUrl || 'tarefas/editar/task_0_Comprar_mantimentos_para_a_semana',
     'rotinas',
     'rotinas/nova',
     'planos',
     'planos/novo',
-    'planos/editar/plan_0_Lançar_novo_website_pessoal',
-    'arquivo'
+    editPlanUrl || 'planos/editar/plan_0_Lançar_novo_website_pessoal',
+    'arquivo',
+    'sincronizar'
   ];
 
   for (const route of routes) {
     console.log(`Taking/asserting screenshots for /${route}...`);
-    await page.goto(`/${route}`);
+    // Se a rota já começar com '/', não adiciona outra barra
+    const urlToVisit = route.startsWith('/') ? route : `/${route}`;
+    await page.goto(urlToVisit);
     await page.waitForTimeout(500); // Wait for Elm view transition
 
-    let saveRoute = route;
-    if (route.startsWith('tarefas/editar/')) {
+    let saveRoute = route.startsWith('/') ? route.substring(1) : route;
+    if (saveRoute.startsWith('tarefas/editar/')) {
       saveRoute = 'tarefas/editar';
-    } else if (route.startsWith('planos/editar/')) {
+      await page.waitForSelector('#new-task-title', { timeout: 10000 });
+    } else if (saveRoute.startsWith('planos/editar/')) {
       saveRoute = 'planos/editar';
+      await page.waitForSelector('h2:has-text("Editar Plano")', { timeout: 10000 });
     }
 
     for (const [layout, viewport] of Object.entries(viewports)) {

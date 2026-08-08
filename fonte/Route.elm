@@ -15,6 +15,7 @@ type Route
     | Arquivo
     | AdicionarPlano
     | EditarPlano String
+    | Sincronizar
 
 
 routeParser : Parser (Route -> a) a
@@ -32,6 +33,7 @@ routeParser =
         , Parser.map AdicionarPlano (Parser.s "planos" </> Parser.s "novo")
         , Parser.map EditarPlano (Parser.s "planos" </> Parser.s "editar" </> Parser.string)
         , Parser.map Arquivo (Parser.s "arquivo")
+        , Parser.map Sincronizar (Parser.s "sincronizar")
         ]
 
 
