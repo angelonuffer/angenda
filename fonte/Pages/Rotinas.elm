@@ -77,7 +77,7 @@ viewRoutineItem routine =
                     text ""
                 ]
             ]
-        , if routine.recurrence == "Diária" then
+        , if routine.recurrence == "Diária" || routine.recurrence == "Semanal" then
             div [ class "w-full bg-slate-50 border border-slate-200 text-slate-500 font-medium py-2 rounded-lg text-sm flex items-center justify-center gap-2" ]
                 [ span [ class "material-symbols-outlined text-slate-400", style "font-size" "18px" ] [ text "auto_awesome" ]
                 , text "Gerada Automaticamente"

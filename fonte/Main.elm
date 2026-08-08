@@ -40,18 +40,19 @@ init flagsValue url key =
     let
         decoded =
             Decode.decodeValue
-                (Decode.map2 (\t u -> { today = t, uuids = u })
+                (Decode.map3 (\t dow u -> { today = t, todayDayOfWeek = dow, uuids = u })
                     (Decode.field "today" Decode.string)
+                    (Decode.field "todayDayOfWeek" Decode.string)
                     (Decode.field "uuids" (Decode.list Decode.string))
                 )
                 flagsValue
                 
-        ( todayStr, initialUuids ) =
+        ( todayStr, todayDayOfWeekStr, initialUuids ) =
             case decoded of
                 Ok vals ->
-                    ( vals.today, vals.uuids )
+                    ( vals.today, vals.todayDayOfWeek, vals.uuids )
                 Err _ ->
-                    ( "2026-01-01", [] )
+                    ( "2026-01-01", "Dom", [] )
     in
     ( { key = key
       , route = Route.fromUrl url
@@ -69,6 +70,7 @@ init flagsValue url key =
       , editingPlanId = Nothing
       , newPlanTaskTitle = ""
       , today = todayStr
+      , todayDayOfWeek = todayDayOfWeekStr
       , drawerOpen = False
       , mqttSyncEnabled = False
       , mqttBrokerUrl = "wss://broker.hivemq.com:8884/mqtt"
@@ -278,21 +280,27 @@ update msg model =
                                 |> List.map (\t -> Ports.saveTask (Task.encodeTask { t | archived = True }))
                                 |> Cmd.batch
 
-                        -- Automatic task generation for daily routines
-                        dailyRoutinesToUpdate =
-                            List.filter (\r -> r.recurrence == "Diária" && not r.archived && r.lastGeneratedDate < model.today) payload.routines
+                        -- Automatic task generation for routines
+                        routinesToUpdate =
+                            List.filter
+                                (\r ->
+                                    not r.archived && r.lastGeneratedDate < model.today &&
+                                    (r.recurrence == "Diária" || (r.recurrence == "Semanal" && List.member model.todayDayOfWeek r.selectedDays))
+                                )
+                                payload.routines
 
                         updatedRoutinesList =
                             List.map
                                 (\r ->
-                                    if r.recurrence == "Diária" && not r.archived && r.lastGeneratedDate < model.today then
+                                    if not r.archived && r.lastGeneratedDate < model.today &&
+                                       (r.recurrence == "Diária" || (r.recurrence == "Semanal" && List.member model.todayDayOfWeek r.selectedDays)) then
                                         { r | lastGeneratedDate = model.today }
                                     else
                                         r
                                 )
                                 payload.routines
 
-                        routinesCount = List.length dailyRoutinesToUpdate
+                        routinesCount = List.length routinesToUpdate
                         
                         (usedUuids, poolAfterRoutines) =
                             getUuids routinesCount model.uuidPool
@@ -311,12 +319,12 @@ update msg model =
                                     , updatedAt = 0
                                     }
                                 )
-                                dailyRoutinesToUpdate
+                                routinesToUpdate
                                 usedUuids
 
                         generationCmds =
                             List.concat
-                                [ List.map (\r -> Ports.saveRoutine (Routine.encodeRoutine { r | lastGeneratedDate = model.today })) dailyRoutinesToUpdate
+                                [ List.map (\r -> Ports.saveRoutine (Routine.encodeRoutine { r | lastGeneratedDate = model.today })) routinesToUpdate
                                 , List.map (\t -> Ports.saveTask (Task.encodeTask t)) newGeneratedTasks
                                 ]
                                 |> Cmd.batch

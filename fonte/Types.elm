@@ -29,6 +29,7 @@ type alias Model =
     , editingPlanId : Maybe String
     , newPlanTaskTitle : String
     , today : String
+    , todayDayOfWeek : String
     , drawerOpen : Bool
     -- MQTT Sync State
     , mqttSyncEnabled : Bool
