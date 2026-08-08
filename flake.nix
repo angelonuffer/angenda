@@ -20,16 +20,17 @@
             elmPackages.elm-review
             elmPackages.elm-test
             
-            # Dependências úteis para testes e-2-e com Playwright no NixOS
-            playwright-driver.browsers
+            # Navegador Chromium nativo do NixOS para o Playwright
+            chromium
           ];
 
           shellHook = ''
             export PATH="$PWD/node_modules/.bin:$PATH"
             
-            # Configura o Playwright para usar os navegadores baixados via Nix, 
-            # evitando falhas ao tentar baixar binários pré-compilados em NixOS.
-            export PLAYWRIGHT_BROWSERS_PATH=${pkgs.playwright-driver.browsers}
+            # Configura o Playwright para usar o Chromium nativo do NixOS, 
+            # ignorando o download e os problemas de versão do `playwright-driver`
+            export PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=${pkgs.chromium}/bin/chromium
+            export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
             export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true
 
             export PS1="\[\e[1;31m\][angenda]\[\e[0m\] \[\e[1;33m\]\w\[\e[0m\] $ "

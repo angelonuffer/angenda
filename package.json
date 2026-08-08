@@ -4,7 +4,7 @@
   "description": "Angenda - Gerenciador de Tarefas",
   "scripts": {
     "build": "mkdir -p alvo && npx elm make fonte/Main.elm --output=alvo/elm.js && cp fonte/index.html alvo/index.html && cp fonte/brand-icon.png alvo/brand-icon.png",
-    "test": "npm run build && npx playwright install chromium --with-deps && npx playwright test"
+    "test": "npm run build && npx playwright test"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.0",
