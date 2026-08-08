@@ -115,7 +115,11 @@
                 const store = transaction.objectStore(storeName);
                 const request = store.getAll();
 
-                request.onsuccess = () => resolve(request.result);
+                request.onsuccess = () => {
+                    const result = request.result || [];
+                    result.sort((a, b) => (a.updatedAt || 0) - (b.updatedAt || 0));
+                    resolve(result);
+                };
                 request.onerror = () => reject(request.error);
             });
         }
