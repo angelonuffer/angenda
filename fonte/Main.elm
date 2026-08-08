@@ -1715,6 +1715,5 @@ viewDrawerLink url iconName label isActive =
 viewFooter : Html Msg
 viewFooter =
     footer [ class "bg-slate-100 border-t border-slate-200 py-6 mt-12 text-center text-slate-500 text-sm" ]
-        [ p [] [ text "Angenda © 2025 - Gerenciamento Inteligente de Tarefas" ]
-        , p [ class "mt-1 text-xs" ] [ text "Desenvolvido em Elm, Tailwind CSS e IndexedDB" ]
+        [ p [] [ text "Angenda - Gerenciamento Inteligente de Tarefas" ]
         ]
