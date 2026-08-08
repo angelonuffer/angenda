@@ -17,7 +17,6 @@ O aplicativo conta com três visualizações principais totalmente integradas:
 
 2. **/rotinas (Gerenciamento de Hábitos e Repetições)**
    - Permite cadastrar tarefas recorrentes com configurações personalizadas de repetição (**Diária**, **Semanal** ou **Mensal**).
-   - Com um único clique em **"Gerar Tarefa"**, uma nova instância daquela rotina é enviada diretamente para a lista principal de tarefas.
 
 3. **/planos (Gerenciamento de Projetos e Objetivos)**
    - Permite organizar sequências estruturadas de tarefas direcionadas a alcançar um objetivo maior.

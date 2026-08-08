@@ -77,20 +77,6 @@ viewRoutineItem routine =
                     text ""
                 ]
             ]
-        , if routine.recurrence == "Diária" || routine.recurrence == "Semanal" then
-            div [ class "w-full bg-slate-50 border border-slate-200 text-slate-500 font-medium py-2 rounded-lg text-sm flex items-center justify-center gap-2" ]
-                [ span [ class "material-symbols-outlined text-slate-400", style "font-size" "18px" ] [ text "auto_awesome" ]
-                , text "Gerada Automaticamente"
-                ]
-          else
-            button
-                [ type_ "button"
-                , onClick (GenerateTaskFromRoutine routine)
-                , class "w-full bg-slate-50 hover:bg-red-50 border border-slate-200 hover:border-red-200 text-red-600 hover:text-red-700 font-semibold py-2 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
-                ]
-                [ span [ class "material-symbols-outlined", style "font-size" "18px" ] [ text "add" ]
-                , text "Gerar Tarefa"
-                ]
         ]
 
 

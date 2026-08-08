@@ -57,10 +57,6 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
   await page.click('button[type="submit"]');
   await page.waitForTimeout(200);
 
-  // Generate a task from the routine
-  await page.click('button:has-text("Gerar Tarefa")');
-  await page.waitForTimeout(200);
-
   // Step 3: Navigate to Planos and create a plan
   console.log('Navigating to /planos to pre-populate plans...');
   await page.goto('/planos');
