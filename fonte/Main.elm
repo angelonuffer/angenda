@@ -80,6 +80,7 @@ init flagsValue url key =
       , mqttStatus = "Desconectado"
       , mqttConnections = []
       , uuidPool = initialUuids
+      , predictDaysAhead = 30
       }
     , Ports.loadData ()
     )
@@ -358,6 +359,9 @@ update msg model =
 
         ToggleDrawer ->
             ( { model | drawerOpen = not model.drawerOpen }, Cmd.none )
+
+        ScrolledNearBottom ->
+            ( { model | predictDaysAhead = model.predictDaysAhead + 30 }, Cmd.none )
 
         CloseDrawer ->
             ( { model | drawerOpen = False }, Cmd.none )
@@ -1464,6 +1468,7 @@ subscriptions _ =
         , Ports.receiveUuids ReceiveUuids
         , Ports.mqttStatusUpdate MqttStatusUpdated
         , Ports.mqttConnectionsUpdate MqttConnectionsUpdated
+        , Ports.onScrollNearBottom (\_ -> ScrolledNearBottom)
         ]
 
 

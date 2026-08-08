@@ -1,4 +1,4 @@
-port module Ports exposing (loadData, saveTask, deleteTask, saveRoutine, deleteRoutine, savePlan, deletePlan, saveConfig, dataLoaded, requestUuids, receiveUuids, mqttStatusUpdate, mqttConnectionsUpdate)
+port module Ports exposing (loadData, saveTask, deleteTask, saveRoutine, deleteRoutine, savePlan, deletePlan, saveConfig, dataLoaded, requestUuids, receiveUuids, mqttStatusUpdate, mqttConnectionsUpdate, onScrollNearBottom)
 
 import Json.Decode as Decode
 import Json.Encode as Encode
@@ -20,3 +20,4 @@ port requestUuids : Int -> Cmd msg
 port receiveUuids : (List String -> msg) -> Sub msg
 port mqttStatusUpdate : (String -> msg) -> Sub msg
 port mqttConnectionsUpdate : (Decode.Value -> msg) -> Sub msg
+port onScrollNearBottom : (() -> msg) -> Sub msg

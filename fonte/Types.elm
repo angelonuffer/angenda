@@ -40,6 +40,7 @@ type alias Model =
     , mqttStatus : String
     , mqttConnections : List { deviceName : String, lastSync : String }
     , uuidPool : List String
+    , predictDaysAhead : Int
     }
 
 
@@ -102,6 +103,7 @@ type Msg
     | MqttStatusUpdated String
     | MqttConnectionsUpdated Decode.Value
     -- Actions
+    | ScrolledNearBottom
     | CreateTask
     | SaveEditedTask String
     | ToggleTask String
