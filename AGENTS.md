@@ -10,6 +10,7 @@ O **Angenda** é um webapp Single-Page Application (SPA) modular para organizaç
 1. **Tarefas avulsas** com agrupamento temporal.
 2. **Hábitos e Rotinas recorrentes** (diárias, semanais ou mensais).
 3. **Planos de Ação sequenciais** com barras de progresso interativas.
+4. **Sincronização P2P / MQTT** criptografada entre dispositivos.
 
 Ele utiliza o compilador **Elm (0.19.2)** para garantir robustez e ausência de erros em tempo de execução, estilização utilitária com **Tailwind CSS**, e persistência de dados local-first robusta com **IndexedDB**.
 
@@ -20,8 +21,8 @@ Ele utiliza o compilador **Elm (0.19.2)** para garantir robustez e ausência de 
 O código-fonte da aplicação está estruturado sob o diretório `fonte/` e segue uma organização limpa e modular:
 
 - **`fonte/Main.elm`**: O ponto de entrada da aplicação, orquestrando o ciclo de vida SPA via `Browser.application`.
-- **`fonte/Route.elm`**: Centraliza o mapeamento de URLs para tipos de rotas da aplicação, gerindo caminhos como `/tarefas`, `/rotinas`, `/planos`, `/planos/novo`, `/arquivo`, etc.
-- **`fonte/Ports.elm`**: Declara as portas (Ports) de entrada e saída para comunicação assíncrona bidirecional com o ambiente JavaScript (IndexedDB, hora local, etc.).
+- **`fonte/Route.elm`**: Centraliza o mapeamento de URLs para tipos de rotas da aplicação, gerindo caminhos como `/tarefas`, `/tarefas/nova`, `/rotinas`, `/planos`, `/planos/novo`, `/arquivo`, `/sincronizar`, etc.
+- **`fonte/Ports.elm`**: Declara as portas (Ports) de entrada e saída para comunicação assíncrona bidirecional com o ambiente JavaScript (IndexedDB, hora local, MQTT, UUIDs, etc.).
 - **`fonte/Types.elm`**: Centraliza os tipos globais (`Model`, `Msg`, etc.) compartilhados entre os módulos, reduzindo acoplamentos circulares.
 - **`fonte/Data/`**: Contém as definições de modelos de dados, encoders e decoders JSON para garantir a persistência:
   - `Task.elm`: Modelo de tarefas (ID, título, status de conclusão, data, arquivado, histórico, origem).
@@ -29,9 +30,11 @@ O código-fonte da aplicação está estruturado sob o diretório `fonte/` e seg
   - `Plan.elm`: Modelo de planos sequenciais (ID, título, descrição, lista de IDs de passos das tarefas).
 - **`fonte/Pages/`**: Contém os componentes visuais e de interação específicos de cada rota:
   - `Tarefas.elm`: Renderização das tarefas ativas agrupadas cronologicamente.
+  - `NovaTarefa.elm`: Formulário reutilizável de criação e edição de tarefas.
   - `Rotinas.elm`: Cadastro de hábitos e geração manual de novas tarefas recorrentes.
   - `Planos.elm`: Exibição, criação e gerenciamento interativo de passos de planos de ação.
   - `Arquivo.elm`: Visualização de tarefas arquivadas e botão para sua restauração.
+  - `Sincronizar.elm`: Configuração e visualização do status de sincronização P2P via MQTT.
 
 ---
 
@@ -54,11 +57,12 @@ Ao expandir a interface do usuário, siga estritamente estas regras de design:
      - `edit` (ícone de editar)
      - `archive` (ícone de arquivar)
      - `unarchive` (ícone de restaurar)
+     - `sync` (ícone de sincronização)
      - `menu` (ícone de menu hambúrguer)
      - `close` (ícone de fechar)
 3. **Menu Lateral (Lateral Drawer):**
    - A navegação principal fica em um painel lateral responsivo aberto por meio do ícone de menu hambúrguer no cabeçalho.
-   - A ordem das opções no menu deve ser estritamente: **Tarefas**, **Planos**, **Rotinas**, e **Arquivo**.
+   - A ordem das opções no menu deve ser estritamente: **Tarefas**, **Planos**, **Rotinas**, **Arquivo** e **Sincronizar**.
 4. **Exibição de Tarefas Ativas:**
    - No painel principal `/tarefas`, as tarefas devem ser categorizadas cronologicamente sob títulos de datas (ex: *Hoje*, *Amanhã*, *Atrasadas*, *Sem data*).
    - Se uma seção de data não possuir tarefas ativas associadas a ela, a seção correspondente deve ser automaticamente oculta da listagem para manter o painel limpo.
@@ -90,15 +94,19 @@ Preste extrema atenção às seguintes lógicas de negócio integradas:
 6. **Decodificação de URL de Rotas:**
    - Para evitar inconsistências ou incompatibilidades com caracteres especiais e espaços em IDs de rotas (como títulos de planos/passos), a aplicação executa o decodamento percentual global de URL em `Route.fromUrl` usando `Url.percentDecode` antes do processamento sintático do parser de rotas.
    - Decodificadores JSON toleram registros legados no IndexedDB provendo valores padrão adequados (como `date` defaultado para `""`, `archived` para `False` e `history` para lista vazia `[]`).
+7. **Sincronização P2P via MQTT:**
+   - A aplicação suporta sincronização descentralizada de dados entre navegadores/dispositivos usando um broker MQTT e criptografia de payload (E2EE).
+   - As configurações do cliente (habilitação, broker, tópico, chave de criptografia e nome do dispositivo) são mantidas na loja `config` do IndexedDB e gerenciadas pela rota `/sincronizar`.
 
 ---
 
 ## 💾 Persistência Local-First (IndexedDB)
 
-- Os dados persistem diretamente no navegador na base **`angenda_db`** usando três object stores:
+- Os dados persistem diretamente no navegador na base **`angenda_db`** usando quatro object stores:
   - `tasks`
   - `routines`
   - `plans`
+  - `config`
 - As atualizações de estado do Elm são transmitidas assincronamente ao JavaScript utilizando portas (ports) mapeadas em `<script>` no arquivo `fonte/index.html`.
 - Qualquer nova propriedade nos modelos deve conter tratamentos adequados nos decodificadores Elm (`Data/`) para evitar a corrupção ou quebra de carregamento de registros preexistentes gravados no navegador do usuário.
 
