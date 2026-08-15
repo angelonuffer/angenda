@@ -254,6 +254,21 @@ groupTasks todayDate tasks =
             List.foldl insertTask Dict.empty tasks
     in
     Dict.values groupedDict
+        |> List.map
+            (\( group, list ) ->
+                ( group
+                , List.sortWith
+                    (\a b ->
+                        case compare a.date b.date of
+                            EQ ->
+                                compare (String.toLower a.title) (String.toLower b.title)
+
+                            other ->
+                                other
+                    )
+                    list
+                )
+            )
 
 
 daysInMonth : Int -> Int -> Int

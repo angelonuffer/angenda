@@ -7,6 +7,9 @@ test('Populate data and generate screenshots for all screens', async ({ page }) 
   page.on('console', msg => console.log('PAGE LOG:', msg.text()));
   page.on('pageerror', err => console.error('PAGE ERROR:', err.stack || err.message));
 
+  // Mock the Date object to ensure tests are deterministic
+  await page.addInitScript({ path: path.join(__dirname, 'simulações', 'date.js') });
+
   // Viewports configurations
   const viewports = {
     horizontal: { width: 1280, height: 800 },
