@@ -327,24 +327,41 @@ dateToString d =
 createPredictedTasks : DateRecord -> Routine -> List Task
 createPredictedTasks date routine =
     let
+        dateStr = dateToString date
         wDayStr = weekdayToString (weekdayIndex date)
-        shouldGenerate =
+        
+        matchesRecurrence =
             if routine.recurrence == "Diária" then
                 True
             else if routine.recurrence == "Semanal" then
                 List.member wDayStr routine.selectedDays
             else
                 False
+                
+        afterStart =
+            if routine.startDate == "" then
+                True
+            else
+                dateStr >= routine.startDate
+                
+        beforeEnd =
+            if routine.endDate == "" then
+                True
+            else
+                dateStr <= routine.endDate
+
+        shouldGenerate =
+            matchesRecurrence && afterStart && beforeEnd
     in
     if shouldGenerate then
-        [ { id = "previsto_" ++ routine.id ++ "_" ++ dateToString date
+        [ { id = "previsto_" ++ routine.id ++ "_" ++ dateStr
           , title = routine.title
           , completed = False
           , origin = "previsto:rotina:" ++ routine.title
           , createdAt = "Previsto"
           , history = []
           , archived = False
-          , date = dateToString date
+          , date = dateStr
           , updatedAt = 0
           }
         ]
