@@ -12,6 +12,8 @@ type alias Routine =
     , lastGeneratedDate : String
     , selectedDays : List String
     , updatedAt : Int
+    , startDate : String
+    , endDate : String
     }
 
 
@@ -25,6 +27,8 @@ encodeRoutine routine =
         , ( "lastGeneratedDate", Encode.string routine.lastGeneratedDate )
         , ( "selectedDays", Encode.list Encode.string routine.selectedDays )
         , ( "updatedAt", Encode.int routine.updatedAt )
+        , ( "startDate", Encode.string routine.startDate )
+        , ( "endDate", Encode.string routine.endDate )
         ]
 
 
@@ -38,3 +42,5 @@ routineDecoder =
         |> Decode.andThen (\f -> Decode.map f (Decode.oneOf [ Decode.field "lastGeneratedDate" Decode.string, Decode.succeed "" ]))
         |> Decode.andThen (\f -> Decode.map f (Decode.oneOf [ Decode.field "selectedDays" (Decode.list Decode.string), Decode.succeed [] ]))
         |> Decode.andThen (\f -> Decode.map f (Decode.oneOf [ Decode.field "updatedAt" Decode.int, Decode.succeed 0 ]))
+        |> Decode.andThen (\f -> Decode.map f (Decode.oneOf [ Decode.field "startDate" Decode.string, Decode.succeed "" ]))
+        |> Decode.andThen (\f -> Decode.map f (Decode.oneOf [ Decode.field "endDate" Decode.string, Decode.succeed "" ]))

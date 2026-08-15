@@ -23,6 +23,8 @@ type alias Model =
     , routineTitleInput : String
     , routineRecurrenceInput : String
     , routineSelectedDaysInput : List String
+    , routineStartDateInput : String
+    , routineEndDateInput : String
     , planTitleInput : String
     , planDescInput : String
     , planDeadlineInput : String
@@ -87,6 +89,8 @@ type Msg
     | InputRoutineTitle String
     | InputRoutineRecurrence String
     | ToggleRoutineDay String
+    | InputRoutineStartDate String
+    | InputRoutineEndDate String
     | InputPlanTitle String
     | InputPlanDesc String
     | InputPlanDeadline String

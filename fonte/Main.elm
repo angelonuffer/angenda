@@ -64,6 +64,8 @@ init flagsValue url key =
       , routineTitleInput = ""
       , routineRecurrenceInput = "Diária"
       , routineSelectedDaysInput = []
+      , routineStartDateInput = ""
+      , routineEndDateInput = ""
       , planTitleInput = ""
       , planDescInput = ""
       , planDeadlineInput = ""
@@ -151,10 +153,10 @@ update msg model =
                         _ ->
                             ( "", "" )
 
-                ( newRoutineTitleInput, newRoutineRecurrenceInput, newRoutineSelectedDaysInput ) =
+                newRoutineInputs =
                     case newRoute of
                         AdicionarRotina ->
-                            ( model.routineTitleInput, model.routineRecurrenceInput, model.routineSelectedDaysInput )
+                            { title = model.routineTitleInput, recurrence = model.routineRecurrenceInput, selectedDays = model.routineSelectedDaysInput, startDate = model.routineStartDateInput, endDate = model.routineEndDateInput }
 
                         Route.EditarRotina id ->
                             let
@@ -163,13 +165,15 @@ update msg model =
                                         |> List.filter (\r -> r.id == id)
                                         |> List.head
                             in
-                            ( maybeRoutine |> Maybe.map .title |> Maybe.withDefault ""
-                            , maybeRoutine |> Maybe.map .recurrence |> Maybe.withDefault "Diária"
-                            , maybeRoutine |> Maybe.map .selectedDays |> Maybe.withDefault []
-                            )
+                            { title = maybeRoutine |> Maybe.map .title |> Maybe.withDefault ""
+                            , recurrence = maybeRoutine |> Maybe.map .recurrence |> Maybe.withDefault "Diária"
+                            , selectedDays = maybeRoutine |> Maybe.map .selectedDays |> Maybe.withDefault []
+                            , startDate = maybeRoutine |> Maybe.map .startDate |> Maybe.withDefault ""
+                            , endDate = maybeRoutine |> Maybe.map .endDate |> Maybe.withDefault ""
+                            }
 
                         _ ->
-                            ( "", "Diária", [] )
+                            { title = "", recurrence = "Diária", selectedDays = [], startDate = "", endDate = "" }
 
                 ( newPlanTitleInput, newPlanDescInput, newPlanDeadlineInput ) =
                     case newRoute of
@@ -195,9 +199,11 @@ update msg model =
                 | route = newRoute
                 , taskTitleInput = newTitleInput
                 , taskDateInput = newDateInput
-                , routineTitleInput = newRoutineTitleInput
-                , routineRecurrenceInput = newRoutineRecurrenceInput
-                , routineSelectedDaysInput = newRoutineSelectedDaysInput
+                , routineTitleInput = newRoutineInputs.title
+                , routineRecurrenceInput = newRoutineInputs.recurrence
+                , routineSelectedDaysInput = newRoutineInputs.selectedDays
+                , routineStartDateInput = newRoutineInputs.startDate
+                , routineEndDateInput = newRoutineInputs.endDate
                 , planTitleInput = newPlanTitleInput
                 , planDescInput = newPlanDescInput
                 , planDeadlineInput = newPlanDeadlineInput
@@ -226,10 +232,10 @@ update msg model =
                                 _ ->
                                     ( model.taskTitleInput, model.taskDateInput )
 
-                        ( newRoutineTitleInput, newRoutineRecurrenceInput, newRoutineSelectedDaysInput ) =
+                        newRoutineInputs =
                             case model.route of
                                 AdicionarRotina ->
-                                    ( model.routineTitleInput, model.routineRecurrenceInput, model.routineSelectedDaysInput )
+                                    { title = model.routineTitleInput, recurrence = model.routineRecurrenceInput, selectedDays = model.routineSelectedDaysInput, startDate = model.routineStartDateInput, endDate = model.routineEndDateInput }
                                 Route.EditarRotina id ->
                                     let
                                         maybeRoutine =
@@ -237,13 +243,15 @@ update msg model =
                                                 |> List.filter (\r -> r.id == id)
                                                 |> List.head
                                     in
-                                    ( maybeRoutine |> Maybe.map .title |> Maybe.withDefault model.routineTitleInput
-                                    , maybeRoutine |> Maybe.map .recurrence |> Maybe.withDefault model.routineRecurrenceInput
-                                    , maybeRoutine |> Maybe.map .selectedDays |> Maybe.withDefault model.routineSelectedDaysInput
-                                    )
+                                    { title = maybeRoutine |> Maybe.map .title |> Maybe.withDefault model.routineTitleInput
+                                    , recurrence = maybeRoutine |> Maybe.map .recurrence |> Maybe.withDefault model.routineRecurrenceInput
+                                    , selectedDays = maybeRoutine |> Maybe.map .selectedDays |> Maybe.withDefault model.routineSelectedDaysInput
+                                    , startDate = maybeRoutine |> Maybe.map .startDate |> Maybe.withDefault model.routineStartDateInput
+                                    , endDate = maybeRoutine |> Maybe.map .endDate |> Maybe.withDefault model.routineEndDateInput
+                                    }
 
                                 _ ->
-                                    ( model.routineTitleInput, model.routineRecurrenceInput, model.routineSelectedDaysInput )
+                                    { title = model.routineTitleInput, recurrence = model.routineRecurrenceInput, selectedDays = model.routineSelectedDaysInput, startDate = model.routineStartDateInput, endDate = model.routineEndDateInput }
 
                         ( newPlanTitleInput, newPlanDescInput, newPlanDeadlineInput ) =
                             case model.route of
@@ -285,7 +293,13 @@ update msg model =
                         routinesToUpdate =
                             List.filter
                                 (\r ->
+                                    let
+                                        isWithinBounds =
+                                            (r.startDate == "" || r.startDate <= model.today)
+                                                && (r.endDate == "" || r.endDate >= model.today)
+                                    in
                                     not r.archived && r.lastGeneratedDate < model.today &&
+                                    isWithinBounds &&
                                     (r.recurrence == "Diária" || (r.recurrence == "Semanal" && List.member model.todayDayOfWeek r.selectedDays))
                                 )
                                 payload.routines
@@ -293,7 +307,13 @@ update msg model =
                         updatedRoutinesList =
                             List.map
                                 (\r ->
+                                    let
+                                        isWithinBounds =
+                                            (r.startDate == "" || r.startDate <= model.today)
+                                                && (r.endDate == "" || r.endDate >= model.today)
+                                    in
                                     if not r.archived && r.lastGeneratedDate < model.today &&
+                                       isWithinBounds &&
                                        (r.recurrence == "Diária" || (r.recurrence == "Semanal" && List.member model.todayDayOfWeek r.selectedDays)) then
                                         { r | lastGeneratedDate = model.today }
                                     else
@@ -337,9 +357,11 @@ update msg model =
                         , plans = payload.plans
                         , taskTitleInput = newTitleInput
                         , taskDateInput = newDateInput
-                        , routineTitleInput = newRoutineTitleInput
-                        , routineRecurrenceInput = newRoutineRecurrenceInput
-                        , routineSelectedDaysInput = newRoutineSelectedDaysInput
+                        , routineTitleInput = newRoutineInputs.title
+                        , routineRecurrenceInput = newRoutineInputs.recurrence
+                        , routineSelectedDaysInput = newRoutineInputs.selectedDays
+                        , routineStartDateInput = newRoutineInputs.startDate
+                        , routineEndDateInput = newRoutineInputs.endDate
                         , planTitleInput = newPlanTitleInput
                       , uuidPool = poolAfterRoutines
                       , mqttSyncEnabled = payload.config |> Maybe.map .mqttSyncEnabled |> Maybe.withDefault model.mqttSyncEnabled
@@ -387,6 +409,12 @@ update msg model =
                         model.routineSelectedDaysInput ++ [ day ]
             in
             ( { model | routineSelectedDaysInput = newSelectedDays }, Cmd.none )
+
+        InputRoutineStartDate val ->
+            ( { model | routineStartDateInput = val }, Cmd.none )
+
+        InputRoutineEndDate val ->
+            ( { model | routineEndDateInput = val }, Cmd.none )
 
         InputPlanTitle val ->
             ( { model | planTitleInput = val }, Cmd.none )
@@ -897,21 +925,25 @@ update msg model =
                         [u1, u2] -> (u1, u2)
                         _ -> ("temp-routine-uuid", "temp-task-uuid")
 
-                    isDaily =
+                    isDailyActiveToday =
                         model.routineRecurrenceInput == "Diária"
+                            && (model.routineStartDateInput == "" || model.routineStartDateInput <= model.today)
+                            && (model.routineEndDateInput == "" || model.routineEndDateInput >= model.today)
 
                     newRoutine =
                         { id = newId
                         , title = model.routineTitleInput
                         , recurrence = model.routineRecurrenceInput
                         , archived = False
-                        , lastGeneratedDate = if isDaily then model.today else ""
+                        , lastGeneratedDate = if isDailyActiveToday then model.today else ""
                         , selectedDays = model.routineSelectedDaysInput
                         , updatedAt = 0
+                        , startDate = model.routineStartDateInput
+                        , endDate = model.routineEndDateInput
                         }
 
                     maybeNewTask =
-                        if isDaily then
+                        if isDailyActiveToday then
                             Just
                                 { id = taskId
                                 , title = model.routineTitleInput
@@ -941,7 +973,7 @@ update msg model =
                                 , replenishCmd
                                 ]
                 in
-                ( { model | routines = model.routines ++ [ newRoutine ], tasks = model.tasks ++ (maybeNewTask |> Maybe.map List.singleton |> Maybe.withDefault []), routineTitleInput = "", routineRecurrenceInput = "Diária", routineSelectedDaysInput = [], uuidPool = poolAfterRoutine }
+                ( { model | routines = model.routines ++ [ newRoutine ], tasks = model.tasks ++ (maybeNewTask |> Maybe.map List.singleton |> Maybe.withDefault []), routineTitleInput = "", routineRecurrenceInput = "Diária", routineSelectedDaysInput = [], routineStartDateInput = "", routineEndDateInput = "", uuidPool = poolAfterRoutine }
                 , Cmd.batch cmds
                 )
 
@@ -961,11 +993,13 @@ update msg model =
                 case maybeRoutine of
                     Just routine ->
                         let
-                            isDaily =
+                            isDailyActiveToday =
                                 model.routineRecurrenceInput == "Diária"
+                                    && (model.routineStartDateInput == "" || model.routineStartDateInput <= model.today)
+                                    && (model.routineEndDateInput == "" || model.routineEndDateInput >= model.today)
 
                             needsNewTask =
-                                isDaily && routine.lastGeneratedDate < model.today
+                                isDailyActiveToday && routine.lastGeneratedDate < model.today
 
                             updatedRoutine =
                                 { routine
@@ -973,6 +1007,8 @@ update msg model =
                                 , recurrence = model.routineRecurrenceInput
                                 , lastGeneratedDate = if needsNewTask then model.today else routine.lastGeneratedDate
                                 , selectedDays = model.routineSelectedDaysInput
+                                , startDate = model.routineStartDateInput
+                                , endDate = model.routineEndDateInput
                                 }
 
                             updatedRoutines =
