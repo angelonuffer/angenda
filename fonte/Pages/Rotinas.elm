@@ -29,7 +29,9 @@ viewRotinas model =
           div [ class "grid grid-cols-1 md:grid-cols-2 gap-4" ]
             [ let
                 activeRoutines =
-                    List.filter (\r -> not r.archived) model.routines
+                    model.routines
+                        |> List.filter (\r -> not r.archived)
+                        |> List.sortBy (\r -> String.toLower r.title)
               in
               if List.isEmpty activeRoutines then
                 div [ class "col-span-full bg-white p-12 text-center space-y-3 rounded-xl border border-slate-200 shadow-sm" ]
