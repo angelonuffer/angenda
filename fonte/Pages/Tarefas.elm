@@ -427,7 +427,7 @@ viewTarefas model =
             case maybeToday of
                 Just todayDate ->
                     div [ class "space-y-6" ]
-                        (List.map viewGroupSection (groupTasks todayDate activeTasks))
+                        (viewProgressBar todayDate activeTasks :: List.map viewGroupSection (groupTasks todayDate activeTasks))
 
                 Nothing ->
                     div [ class "bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden" ]
@@ -592,3 +592,45 @@ viewOriginBadge origin =
     else
         span [ class "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-semibold bg-slate-100 text-slate-600" ]
             [ text origin ]
+
+
+viewProgressBar : DateRecord -> List Task -> Html Msg
+viewProgressBar todayDate activeTasks =
+    let
+        todayTasks =
+            List.filter (\t -> classifyTask todayDate t == Hoje) activeTasks
+
+        total =
+            List.length todayTasks
+
+        completed =
+            List.length (List.filter .completed todayTasks)
+
+        percentage =
+            if total == 0 then
+                0
+            else
+                (toFloat completed / toFloat total) * 100
+    in
+    if total > 0 then
+        div [ class "bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col gap-3" ]
+            [ div [ class "flex justify-between items-center" ]
+                [ div [ class "flex items-center gap-2" ]
+                    [ span [ class "material-symbols-outlined text-amber-500" ] [ text "bolt" ]
+                    , span [ class "text-sm font-bold text-slate-700" ] [ text "Progresso de Hoje" ]
+                    ]
+                , span [ class "text-sm font-semibold text-slate-500" ]
+                    [ text (String.fromInt completed ++ " de " ++ String.fromInt total ++ " concluídas") ]
+                ]
+            , div [ class "w-full bg-slate-100 rounded-full h-2.5 overflow-hidden" ]
+                [ div
+                    [ class "bg-gradient-to-r from-amber-400 to-red-500 h-2.5 rounded-full transition-all duration-500 ease-out"
+                    , style "width" (String.fromFloat percentage ++ "%")
+                    ]
+                    []
+                ]
+            ]
+
+    else
+        text ""
+
