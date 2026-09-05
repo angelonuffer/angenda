@@ -20,7 +20,7 @@ jobs:
           name: test-results
           path: test-results/
           retention-days: 7
-      - run: nix run github:angelonuffer/testes-caixa-preta/80370b7c00b924bcd3177a6299e186f09afa187b
+      - run: nix run github:angelonuffer/testes-caixa-preta/aab2d428967ad8367465280b9634afc6bffa27a8
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

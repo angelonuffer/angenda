@@ -23,7 +23,7 @@
       }
       {
         "capturar tela" = "tarefa-criada.png";
-        "hash esperado" = "9000458676475008";
+        "hash esperado" = "b29d375abf2b1435";
       }
     ];
   }
