@@ -1,6 +1,6 @@
 [
   {
-    "cenário" = "Criação de Plano";
+    "cenário" = "Criar Plano";
     "navegação" = [
       {
         "descrição" = ''
