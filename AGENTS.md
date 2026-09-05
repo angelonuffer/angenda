@@ -135,6 +135,12 @@ Siga as instruções a seguir para manter o ambiente estável:
      nix develop --command npm test
      ```
    - Os arquivos de screenshot de validação são salvos e atualizados sob o caminho versionado `testes/páginas/`. Certifique-se de que os testes passem com sucesso antes de realizar commits.
+   - Além disso, cenários declarativos de teste de caixa-preta baseados em Nix são definidos sob `testes/` (ex: `testes/tarefa.nix` contendo cenários de criação e edição de tarefas, e `testes/criar-plano.nix`). Esses testes são executados e validados com `testes-caixa-preta`:
+     ```bash
+     nix run github:angelonuffer/testes-caixa-preta
+     ```
+     As capturas de tela de validação desses cenários ficam em `testes/telas/`.
 4. **Deploy de Hospedagem (Cloudflare Pages):**
    - A infraestrutura de deploy do Cloudflare Pages está configurada em `wrangler.json` apontando o diretório de assets para o diretório `./alvo`.
    - A regra de roteamento de Single-Page Application (SPA) está habilitada por meio de `assets.not_found_handling = "single-page-application"` para direcionar adequadamente rotas dinâmicas secundárias de volta ao index de forma transparente.
+

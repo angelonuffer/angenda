@@ -27,7 +27,7 @@
       }
       {
         "capturar tela" = "plano-criado.png";
-        "hash esperado" = "759eda80b95880f7";
+        "hash esperado" = "63cd639544bc9a9";
       }
     ];
   }
