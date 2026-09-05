@@ -5,3 +5,5 @@ elm-stuff/
 .DS_Store
 test-results/
 alvo/
+testes/chrome-profile/
+testes/servidor.log
