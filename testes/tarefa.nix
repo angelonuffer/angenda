@@ -69,4 +69,38 @@
       }
     ];
   }
+  {
+    "cenário" = "Remover tarefa";
+    "navegação" = [
+      {
+        "descrição" = ''
+          Este cenário consiste em criar uma tarefa, clicar no botão para
+          removê-la/arquivá-la e aguardar que a mesma desapareça da listagem.
+          Isso garante que a remoção da tarefa foi submetida e refletida
+          corretamente no IndexedDB.
+        '';
+      }
+      {
+        "navegar para" = "/tarefas/nova";
+      }
+      {
+        "enviar formulário" = {
+          "new-task-title" = "Comprar mantimentos para a semana";
+        };
+      }
+      {
+        "esperar aparecer" = "Comprar mantimentos para a semana";
+      }
+      {
+        "clicar em" = "Arquivar Tarefa";
+      }
+      {
+        "esperar sumir" = "Comprar mantimentos para a semana";
+      }
+      {
+        "capturar tela" = "tarefa-removida.png";
+        "hash esperado" = "caf56e37ad4bc01f";
+      }
+    ];
+  }
 ]
