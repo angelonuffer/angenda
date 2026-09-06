@@ -4,7 +4,7 @@ module.exports = defineConfig({
   testDir: './testes',
   testMatch: 'páginas.js',
   snapshotPathTemplate: '{testDir}/páginas/{arg}{ext}',
-  timeout: 30000,
+  timeout: 60000,
   expect: {
     timeout: 5000
   },

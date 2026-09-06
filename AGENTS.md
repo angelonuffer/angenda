@@ -135,7 +135,7 @@ Siga as instruções a seguir para manter o ambiente estável:
      nix develop --command npm test
      ```
    - Os arquivos de screenshot de validação são salvos e atualizados sob o caminho versionado `testes/páginas/`. Certifique-se de que os testes passem com sucesso antes de realizar commits.
-   - Além disso, cenários declarativos de teste de caixa-preta baseados em Nix são definidos sob `testes/` (ex: `testes/tarefa.nix` contendo cenários de criação e edição de tarefas, e `testes/criar-plano.nix`). Esses testes são executados e validados com `testes-caixa-preta`:
+   - Além disso, cenários declarativos de teste de caixa-preta baseados em Nix são definidos sob `testes/` (ex: `testes/tarefa.nix` contendo cenários de criação, edição, arquivamento e restauração de tarefas, e `testes/plano.nix`). Esses testes são executados e validados com `testes-caixa-preta`:
      ```bash
      nix run github:angelonuffer/testes-caixa-preta
      ```
