@@ -505,6 +505,16 @@
             if (app.ports.saveTask) {
                 app.ports.saveTask.subscribe(async (task) => {
                     try {
+                        const existingTask = await getItem('tasks', task.id);
+                        if (task.archived) {
+                            if (!existingTask || !existingTask.archived) {
+                                task.archivedAt = Date.now();
+                            } else if (!task.archivedAt) {
+                                task.archivedAt = existingTask.archivedAt || 0;
+                            }
+                        } else {
+                            task.archivedAt = 0;
+                        }
                         task.updatedAt = Date.now();
                         await saveItem('tasks', task);
                         console.log('Task saved to IndexedDB:', task.id);
@@ -532,6 +542,16 @@
             if (app.ports.saveRoutine) {
                 app.ports.saveRoutine.subscribe(async (routine) => {
                     try {
+                        const existingRoutine = await getItem('routines', routine.id);
+                        if (routine.archived) {
+                            if (!existingRoutine || !existingRoutine.archived) {
+                                routine.archivedAt = Date.now();
+                            } else if (!routine.archivedAt) {
+                                routine.archivedAt = existingRoutine.archivedAt || 0;
+                            }
+                        } else {
+                            routine.archivedAt = 0;
+                        }
                         routine.updatedAt = Date.now();
                         await saveItem('routines', routine);
                         console.log('Routine saved to IndexedDB:', routine.id);
@@ -559,6 +579,16 @@
             if (app.ports.savePlan) {
                 app.ports.savePlan.subscribe(async (plan) => {
                     try {
+                        const existingPlan = await getItem('plans', plan.id);
+                        if (plan.archived) {
+                            if (!existingPlan || !existingPlan.archived) {
+                                plan.archivedAt = Date.now();
+                            } else if (!plan.archivedAt) {
+                                plan.archivedAt = existingPlan.archivedAt || 0;
+                            }
+                        } else {
+                            plan.archivedAt = 0;
+                        }
                         plan.updatedAt = Date.now();
                         await saveItem('plans', plan);
                         console.log('Plan saved to IndexedDB:', plan.id);

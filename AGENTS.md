@@ -100,6 +100,9 @@ Preste extrema atenção às seguintes lógicas de negócio integradas:
    - Decodificadores JSON toleram registros legados no IndexedDB provendo valores padrão adequados (como `date` defaultado para `""`, `archived` para `False`, `history` para lista vazia `[]`, e `updatedAt` para `0`).
 7. **Resolução de Conflitos na Sincronização:**
    - Cada entidade persistida deve possuir a propriedade `updatedAt : Int` (timestamp em milissegundos). A reconciliação das mensagens no cliente recebedor aplica a estratégia LWW (Last-Write-Wins), atualizando os registros locais somente quando a entidade recebida via rede tiver um `updatedAt` superior ou no caso do registro não existir localmente.
+8. **Ordenação do Arquivo:**
+   - Tarefas, planos e rotinas arquivados possuem `archivedAt : Int`, preenchido ao ocorrer o arquivamento e zerado ao restaurar.
+   - A página `/arquivo` ordena os itens pelo `archivedAt` decrescente. Para registros legados sem esse campo, o desempate utiliza a data planejada da entidade (`date`, `deadline` ou período da rotina).
 
 ---
 
