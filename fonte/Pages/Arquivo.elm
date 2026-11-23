@@ -32,6 +32,7 @@ viewArquivo model =
 
         allArchivedItems =
             archivedTasks ++ archivedPlans ++ archivedRoutines
+                |> List.sortWith compareArchivedItems
     in
     div [ class "space-y-6" ]
         [ -- Title & Description
@@ -55,6 +56,91 @@ viewArquivo model =
                     (List.map viewArchivedItem allArchivedItems)
             ]
         ]
+
+
+compareArchivedItems : ArchivedItem -> ArchivedItem -> Basics.Order
+compareArchivedItems first second =
+    let
+        firstTimestamp =
+            archivedTimestamp first
+
+        secondTimestamp =
+            archivedTimestamp second
+
+        firstLegacyDate =
+            legacyArchiveDate first
+
+        secondLegacyDate =
+            legacyArchiveDate second
+    in
+    if firstTimestamp > 0 && secondTimestamp > 0 then
+        compareDescending firstTimestamp secondTimestamp
+
+    else if firstTimestamp > 0 then
+        LT
+
+    else if secondTimestamp > 0 then
+        GT
+
+    else
+        compareStringsDescending firstLegacyDate secondLegacyDate
+
+
+archivedTimestamp : ArchivedItem -> Int
+archivedTimestamp item =
+    case item of
+        ArchivedTask task ->
+            task.archivedAt
+
+        ArchivedPlan plan ->
+            plan.archivedAt
+
+        ArchivedRoutine routine ->
+            routine.archivedAt
+
+
+legacyArchiveDate : ArchivedItem -> String
+legacyArchiveDate item =
+    case item of
+        ArchivedTask task ->
+            task.date
+
+        ArchivedPlan plan ->
+            plan.deadline
+
+        ArchivedRoutine routine ->
+            if routine.endDate /= "" then
+                routine.endDate
+
+            else if routine.startDate /= "" then
+                routine.startDate
+
+            else
+                routine.lastGeneratedDate
+
+
+compareDescending : Int -> Int -> Basics.Order
+compareDescending first second =
+    if first > second then
+        LT
+
+    else if first < second then
+        GT
+
+    else
+        EQ
+
+
+compareStringsDescending : String -> String -> Basics.Order
+compareStringsDescending first second =
+    if first > second then
+        LT
+
+    else if first < second then
+        GT
+
+    else
+        EQ
 
 
 viewArchivedItem : ArchivedItem -> Html Msg

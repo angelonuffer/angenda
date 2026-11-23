@@ -278,7 +278,7 @@ update msg model =
                             List.map
                                 (\t ->
                                     if t.completed && t.date /= "" && t.date < model.today && not t.archived then
-                                        { t | archived = True }
+                                        { t | archived = True, archivedAt = 1 }
                                     else
                                         t
                                 )
@@ -286,7 +286,7 @@ update msg model =
 
                         archiveCmds =
                             tasksToArchive
-                                |> List.map (\t -> Ports.saveTask (Task.encodeTask { t | archived = True }))
+                                |> List.map (\t -> Ports.saveTask (Task.encodeTask { t | archived = True, archivedAt = 1 }))
                                 |> Cmd.batch
 
                         -- Automatic task generation for routines
@@ -336,6 +336,7 @@ update msg model =
                                     , createdAt = "Rotina (" ++ r.recurrence ++ ")"
                                     , history = []
                                     , archived = False
+                                    , archivedAt = 0
                                     , date = model.today
                                     , updatedAt = 0
                                     }
@@ -515,6 +516,7 @@ update msg model =
                                         , createdAt = "Plano: " ++ plan.title
                                         , history = []
                                         , archived = False
+                                        , archivedAt = 0
                                         , date = model.taskDateInput
                                         , updatedAt = 0
                                         }
@@ -553,6 +555,7 @@ update msg model =
                                 {-- Simple unique key, indexdb or JS will keep it safe, but we can make a pseudo-random or simple timestamp id --}
                                 , history = []
                                 , archived = False
+                                , archivedAt = 0
                                 , date = model.taskDateInput
                                 , updatedAt = 0
                                 }
@@ -862,7 +865,7 @@ update msg model =
                     List.map
                         (\t ->
                             if t.id == id then
-                                { t | archived = True }
+                                { t | archived = True, archivedAt = 1 }
 
                             else
                                 t
@@ -876,7 +879,7 @@ update msg model =
                 Just task ->
                     let
                         updatedTask =
-                            { task | archived = True }
+                            { task | archived = True, archivedAt = 1 }
                     in
                     ( { model | tasks = updatedTasks }
                     , Ports.saveTask (Task.encodeTask updatedTask)
@@ -891,7 +894,7 @@ update msg model =
                     List.map
                         (\t ->
                             if t.id == id then
-                                { t | archived = False }
+                                { t | archived = False, archivedAt = 0 }
 
                             else
                                 t
@@ -905,7 +908,7 @@ update msg model =
                 Just task ->
                     let
                         updatedTask =
-                            { task | archived = False }
+                            { task | archived = False, archivedAt = 0 }
                     in
                     ( { model | tasks = updatedTasks }
                     , Ports.saveTask (Task.encodeTask updatedTask)
@@ -935,6 +938,7 @@ update msg model =
                         , title = model.routineTitleInput
                         , recurrence = model.routineRecurrenceInput
                         , archived = False
+                        , archivedAt = 0
                         , lastGeneratedDate = if isDailyActiveToday then model.today else ""
                         , selectedDays = model.routineSelectedDaysInput
                         , updatedAt = 0
@@ -952,6 +956,7 @@ update msg model =
                                 , createdAt = "Rotina (" ++ model.routineRecurrenceInput ++ ")"
                                 , history = []
                                 , archived = False
+                                , archivedAt = 0
                                 , date = model.today
                                 , updatedAt = 0
                                 }
@@ -1032,6 +1037,7 @@ update msg model =
                                         , createdAt = "Rotina (" ++ model.routineRecurrenceInput ++ ")"
                                         , history = []
                                         , archived = False
+                                        , archivedAt = 0
                                         , date = model.today
                                         , updatedAt = 0
                                         }
@@ -1070,7 +1076,7 @@ update msg model =
                     List.map
                         (\r ->
                             if r.id == id then
-                                { r | archived = True }
+                                { r | archived = True, archivedAt = 1 }
 
                             else
                                 r
@@ -1084,7 +1090,7 @@ update msg model =
                 Just routine ->
                     let
                         updatedRoutine =
-                            { routine | archived = True }
+                            { routine | archived = True, archivedAt = 1 }
                     in
                     ( { model | routines = updatedRoutines }
                     , Ports.saveRoutine (Routine.encodeRoutine updatedRoutine)
@@ -1099,7 +1105,7 @@ update msg model =
                     List.map
                         (\r ->
                             if r.id == id then
-                                { r | archived = False }
+                                { r | archived = False, archivedAt = 0 }
 
                             else
                                 r
@@ -1113,7 +1119,7 @@ update msg model =
                 Just routine ->
                     let
                         updatedRoutine =
-                            { routine | archived = False }
+                            { routine | archived = False, archivedAt = 0 }
                     in
                     ( { model | routines = updatedRoutines }
                     , Ports.saveRoutine (Routine.encodeRoutine updatedRoutine)
@@ -1134,6 +1140,7 @@ update msg model =
                     , createdAt = "Rotina (" ++ routine.recurrence ++ ")"
                     , history = []
                     , archived = False
+                    , archivedAt = 0
                     , date = ""
                     , updatedAt = 0
                     }
@@ -1158,6 +1165,7 @@ update msg model =
                         , description = model.planDescInput
                         , tasks = []
                         , archived = False
+                        , archivedAt = 0
                         , deadline = model.planDeadlineInput
                         , updatedAt = 0
                         }
@@ -1225,7 +1233,7 @@ update msg model =
                     List.map
                         (\p ->
                             if p.id == id then
-                                { p | archived = True }
+                                { p | archived = True, archivedAt = 1 }
                             else
                                 p
                         )
@@ -1239,7 +1247,7 @@ update msg model =
                     List.map
                         (\t ->
                             if String.startsWith ("plano:" ++ id ++ ":") t.origin then
-                                { t | archived = True }
+                                { t | archived = True, archivedAt = 1 }
                             else
                                 t
                         )
@@ -1248,12 +1256,12 @@ update msg model =
                 planTasksCmds =
                     model.tasks
                         |> List.filter (\t -> String.startsWith ("plano:" ++ id ++ ":") t.origin)
-                        |> List.map (\t -> Ports.saveTask (Task.encodeTask { t | archived = True }))
+                        |> List.map (\t -> Ports.saveTask (Task.encodeTask { t | archived = True, archivedAt = 1 }))
 
                 planCmd =
                     case maybePlan of
                         Just plan ->
-                            [ Ports.savePlan (Plan.encodePlan { plan | archived = True }) ]
+                            [ Ports.savePlan (Plan.encodePlan { plan | archived = True, archivedAt = 1 }) ]
                         Nothing ->
                             []
             in
@@ -1267,7 +1275,7 @@ update msg model =
                     List.map
                         (\p ->
                             if p.id == id then
-                                { p | archived = False }
+                                { p | archived = False, archivedAt = 0 }
                             else
                                 p
                         )
@@ -1281,7 +1289,7 @@ update msg model =
                     List.map
                         (\t ->
                             if String.startsWith ("plano:" ++ id ++ ":") t.origin then
-                                { t | archived = False }
+                                { t | archived = False, archivedAt = 0 }
                             else
                                 t
                         )
@@ -1290,12 +1298,12 @@ update msg model =
                 planTasksCmds =
                     model.tasks
                         |> List.filter (\t -> String.startsWith ("plano:" ++ id ++ ":") t.origin)
-                        |> List.map (\t -> Ports.saveTask (Task.encodeTask { t | archived = False }))
+                        |> List.map (\t -> Ports.saveTask (Task.encodeTask { t | archived = False, archivedAt = 0 }))
 
                 planCmd =
                     case maybePlan of
                         Just plan ->
-                            [ Ports.savePlan (Plan.encodePlan { plan | archived = False }) ]
+                            [ Ports.savePlan (Plan.encodePlan { plan | archived = False, archivedAt = 0 }) ]
                         Nothing ->
                             []
             in
@@ -1351,6 +1359,7 @@ update msg model =
                                 , createdAt = "Plano: " ++ plan.title
                                 , history = []
                                 , archived = False
+                                , archivedAt = 0
                                 , date = ""
                                 , updatedAt = 0
                                 }
@@ -1456,7 +1465,7 @@ update msg model =
                 Just task ->
                     let
                         updatedTask =
-                            { task | archived = True }
+                            { task | archived = True, archivedAt = 1 }
 
                         updatedTasks =
                             List.map

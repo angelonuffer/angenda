@@ -361,6 +361,7 @@ createPredictedTasks date routine =
           , createdAt = "Previsto"
           , history = []
           , archived = False
+          , archivedAt = 0
           , date = dateStr
           , updatedAt = 0
           }
